@@ -1,0 +1,1161 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TricoMaster CRM · Leads</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root{
+  --bg:#f5f4f0; --surface:#fcfcfb; --surface-2:#f0efea; --line:#e2e0d8; --line-2:#cfccc1;
+  --ink:#16201b; --ink-2:#4f5752; --ink-3:#7d847f;
+  --brand:#1f4d3a; --brand-2:#2c6a50; --brand-soft:#e3eee8; --gold:#b8955a; --gold-soft:#f5eddd;
+  --danger:#b3302f; --danger-soft:#fbe9e8;
+  --s1:#2a78d6; --s2:#eb6834; --s3:#1baf7a;
+  --radius:10px; --shadow:0 1px 2px rgba(20,30,25,.06),0 4px 14px rgba(20,30,25,.05);
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--ink);font-size:14px;line-height:1.45;-webkit-font-smoothing:antialiased}
+button,input,select,textarea{font:inherit;color:inherit}
+a{color:var(--brand-2)}
+.hidden{display:none!important}
+
+/* Header */
+header.top{background:var(--brand);color:#fff;position:sticky;top:0;z-index:30}
+.top-inner{max-width:1400px;margin:0 auto;display:flex;align-items:center;gap:20px;padding:10px 20px;flex-wrap:wrap}
+.logo{display:flex;align-items:center;gap:10px;font-weight:700;letter-spacing:.2px;white-space:nowrap}
+.logo .mark{width:30px;height:30px;border-radius:8px;background:var(--gold);display:grid;place-items:center;color:var(--brand);font-weight:800;font-size:13px}
+.logo small{display:block;font-weight:500;font-size:11px;opacity:.75;letter-spacing:.3px}
+nav.tabs{display:flex;gap:4px;flex:1;flex-wrap:wrap}
+nav.tabs button{background:transparent;border:0;color:#d9e6df;padding:8px 14px;border-radius:8px;cursor:pointer;font-weight:500}
+nav.tabs button:hover{background:rgba(255,255,255,.08);color:#fff}
+nav.tabs button.active{background:rgba(255,255,255,.14);color:#fff}
+.sync{font-size:12px;display:flex;align-items:center;gap:6px;color:#d9e6df;white-space:nowrap}
+.sync .dot{width:8px;height:8px;border-radius:50%;background:#9aa}
+.sync.ok .dot{background:#5fd39a}.sync.warn .dot{background:#f0b84a}.sync.err .dot{background:#ff7a70}
+
+main{max-width:1400px;margin:0 auto;padding:18px 20px 60px}
+
+/* Filters */
+.filters{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:12px;display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px;margin-bottom:16px;box-shadow:var(--shadow)}
+.filters .search{grid-column:span 2}
+.filters label{display:flex;flex-direction:column;gap:3px;font-size:11px;color:var(--ink-3);font-weight:600;text-transform:uppercase;letter-spacing:.4px}
+.filters .actions{display:flex;align-items:flex-end;gap:8px}
+.fld{border:1px solid var(--line-2);background:#fff;border-radius:8px;padding:7px 9px;width:100%;min-width:0;font-size:13.5px;text-transform:none;letter-spacing:0;font-weight:400;color:var(--ink)}
+.fld:focus{outline:2px solid var(--brand-2);outline-offset:-1px;border-color:transparent}
+textarea.fld{resize:vertical;min-height:70px}
+
+.btn{border:1px solid var(--line-2);background:#fff;border-radius:8px;padding:7px 13px;cursor:pointer;font-weight:500;display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+.btn:hover{background:var(--surface-2)}
+.btn.primary{background:var(--brand);border-color:var(--brand);color:#fff}
+.btn.primary:hover{background:var(--brand-2)}
+.btn.gold{background:var(--gold);border-color:var(--gold);color:#fff}
+.btn.danger{color:var(--danger);border-color:#e6b9b8}
+.btn.danger:hover{background:var(--danger-soft)}
+.btn.sm{padding:4px 9px;font-size:12.5px}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow)}
+.card h3{margin:0;font-size:14px;font-weight:600}
+.card .hd{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:14px 16px 0}
+.card .hd .sub{font-size:12px;color:var(--ink-3);font-weight:400}
+.card .bd{padding:12px 16px 16px}
+
+/* KPIs */
+.kpis{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:10px;margin-bottom:14px}
+@media(max-width:1200px){.kpis{grid-template-columns:repeat(4,minmax(0,1fr))}}@media(max-width:640px){.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.kpi{padding:12px 12px}
+.kpi .lbl{font-size:12px;color:var(--ink-2);font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.kpi .val{font-size:22px;white-space:nowrap;font-weight:700;letter-spacing:-.5px;margin-top:2px;font-variant-numeric:tabular-nums}
+.kpi .hint{font-size:12px;color:var(--ink-3);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.stack{display:flex;flex-direction:column;gap:14px;margin-bottom:14px}.stack>*{min-width:0}
+@media(max-width:980px){.filters .search{grid-column:span 1}}
+
+/* HTML bars */
+.hbars{display:flex;flex-direction:column;gap:9px}
+.hbar{display:grid;grid-template-columns:minmax(110px,190px) 1fr auto;align-items:center;gap:10px;font-size:13px}
+.hbar .nm{color:var(--ink-2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hbar .track{height:18px;background:var(--surface-2);border-radius:4px;overflow:hidden}
+.hbar .fill{height:100%;border-radius:0 4px 4px 0;background:var(--s1);min-width:2px}
+.hbar .num{font-variant-numeric:tabular-nums;color:var(--ink);font-weight:600;min-width:70px;text-align:right}
+.hbar .num span{color:var(--ink-3);font-weight:400;margin-left:4px}
+.empty{color:var(--ink-3);font-size:13px;padding:10px 0;text-align:center}
+
+/* Funnel */
+.funnel{display:flex;flex-direction:column;gap:6px}
+.fstep{display:grid;grid-template-columns:130px 1fr 200px;align-items:center;gap:10px}
+.fstep .nm{font-size:13px;color:var(--ink-2)}
+.fstep .bar{height:30px;border-radius:4px;display:flex;align-items:center;padding-left:10px;color:#fff;font-weight:600;font-size:13px;min-width:34px}
+.fstep .pct{font-size:12px;color:var(--ink-3);text-align:right;font-variant-numeric:tabular-nums}
+.fstep .pct b{color:var(--ink);font-weight:600}
+
+/* Tables */
+.tbl-wrap{overflow:auto}
+table.tbl{width:100%;border-collapse:collapse;font-size:13px}
+.tbl th{text-align:left;font-weight:600;color:var(--ink-2);font-size:11.5px;text-transform:uppercase;letter-spacing:.4px;padding:9px 10px;border-bottom:1px solid var(--line);background:var(--surface);position:sticky;top:0;white-space:nowrap}
+.tbl th.sort{cursor:pointer;user-select:none}
+.tbl th.sort:hover{color:var(--ink)}
+.tbl td{padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:middle}
+.tbl tr:hover td{background:#faf9f5}
+.tbl td.num,.tbl th.num{text-align:right;font-variant-numeric:tabular-nums}
+.tbl .name{font-weight:600;cursor:pointer}
+.tbl .name:hover{color:var(--brand-2);text-decoration:underline}
+.tbl .muted{color:var(--ink-3);font-size:12px}
+.mini{display:flex;align-items:center;gap:6px}
+.mini .tr{flex:1;height:6px;background:var(--surface-2);border-radius:3px;overflow:hidden;min-width:50px}
+.mini .tr i{display:block;height:100%;background:var(--s1);border-radius:0 3px 3px 0}
+
+.badge{display:inline-flex;align-items:center;gap:5px;padding:2px 8px;border-radius:20px;font-size:12px;font-weight:600;white-space:nowrap;border:1px solid transparent}
+.badge::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor}
+.st-novo{background:#eeede8;color:#55554f}
+.st-contato{background:#e3edfb;color:#1c5cab}
+.st-agendou{background:#dff3ec;color:#0f6e4c}
+.st-compareceu{background:#ebe8fb;color:#4b3db5}
+.st-negociacao{background:#fdf0d6;color:#8a5a00}
+.st-fechou{background:#d8efd8;color:#1a6a1a}
+.st-nao_agendou{background:#fbe5e5;color:#a32c2b}
+.st-perdido{background:#ece7e4;color:#6b4b44}
+select.st-sel{border:1px solid transparent;border-radius:20px;padding:3px 8px;font-size:12px;font-weight:600;cursor:pointer;max-width:170px}
+
+.toolbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:12px 14px;border-bottom:1px solid var(--line)}
+.toolbar .grow{flex:1}
+.toolbar .count{color:var(--ink-2);font-size:13px}
+.bulk{background:var(--gold-soft);border-bottom:1px solid #ead9b6;padding:8px 14px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:13px}
+.pager{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;font-size:13px;color:var(--ink-2);gap:10px;flex-wrap:wrap}
+
+/* Modal */
+.overlay{position:fixed;inset:0;background:rgba(15,25,20,.42);z-index:50;display:flex;align-items:flex-start;justify-content:center;padding:40px 14px;overflow:auto}
+.modal{background:var(--surface);border-radius:14px;width:100%;max-width:760px;box-shadow:0 20px 60px rgba(0,0,0,.25)}
+.modal.sm{max-width:440px}
+.modal .mh{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--line)}
+.modal .mh h2{margin:0;font-size:17px}
+.modal .mb{padding:18px 20px}
+.modal .mf{display:flex;justify-content:space-between;gap:8px;padding:14px 20px;border-top:1px solid var(--line);flex-wrap:wrap}
+.x{background:none;border:0;font-size:22px;cursor:pointer;color:var(--ink-3);line-height:1}
+.form{display:grid;grid-template-columns:1fr 1fr;gap:12px 14px}
+.form .full{grid-column:1/-1}
+.form label{display:flex;flex-direction:column;gap:4px;font-size:12px;font-weight:600;color:var(--ink-2)}
+.form .sec{grid-column:1/-1;font-size:11px;text-transform:uppercase;letter-spacing:.6px;color:var(--gold);font-weight:700;margin-top:6px;border-bottom:1px solid var(--line);padding-bottom:4px}
+@media(max-width:640px){.form{grid-template-columns:1fr}}
+.req{color:var(--danger)}
+.hist{font-size:12px;color:var(--ink-2);max-height:140px;overflow:auto;background:var(--surface-2);border-radius:8px;padding:8px 10px}
+.hist div{padding:2px 0}
+.hist time{color:var(--ink-3);margin-right:6px}
+
+/* Import */
+.drop{border:2px dashed var(--line-2);border-radius:12px;padding:36px 20px;text-align:center;background:var(--surface);cursor:pointer;transition:.15s}
+.drop:hover,.drop.over{border-color:var(--brand-2);background:var(--brand-soft)}
+.drop b{display:block;font-size:16px;margin-bottom:4px}
+.drop span{color:var(--ink-3);font-size:13px}
+.map-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px}
+.map-grid label{display:flex;flex-direction:column;gap:4px;font-size:12px;font-weight:600;color:var(--ink-2)}
+.progress{height:8px;background:var(--surface-2);border-radius:4px;overflow:hidden;margin-top:10px}
+.progress i{display:block;height:100%;background:var(--brand-2);width:0;transition:width .2s}
+.note{font-size:12.5px;color:var(--ink-2);background:var(--gold-soft);border:1px solid #ead9b6;border-radius:8px;padding:10px 12px}
+.stats-inline{display:flex;gap:18px;flex-wrap:wrap;font-size:13px;margin:10px 0}
+.stats-inline b{font-size:18px;display:block}
+
+/* Config */
+.cfg-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px}
+.cfg-grid textarea{min-height:170px;font-size:13px}
+
+.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--ink);color:#fff;padding:10px 16px;border-radius:10px;font-size:13.5px;z-index:80;box-shadow:0 8px 30px rgba(0,0,0,.25);max-width:90vw}
+.toast.err{background:var(--danger)}
+.banner{background:var(--gold-soft);border:1px solid #ead9b6;color:#6b5320;padding:9px 14px;border-radius:8px;margin-bottom:14px;font-size:13px}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--ink-2);margin-bottom:8px}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:5px;vertical-align:-1px}
+.overlay.hidden{display:none!important}
+.chart-box{position:relative;height:260px}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="top-inner">
+    <div class="logo"><div class="mark">TM</div><div>TricoMaster CRM<small>Gestão de leads · RD Station · Firebase</small></div></div>
+    <nav class="tabs" id="tabs">
+      <button data-view="dashboard" class="active">Dashboard</button>
+      <button data-view="leads">Leads</button>
+      <button data-view="importar">Importar planilha</button>
+      <button data-view="config">Configurações</button>
+    </nav>
+    <div class="sync" id="sync"><span class="dot"></span><span id="syncTxt">Conectando…</span></div>
+    <div class="sync hidden" id="userBox"><span id="userEmail"></span> <button class="btn sm" id="btnLogout" style="background:transparent;color:#fff;border-color:rgba(255,255,255,.35)">Sair</button></div>
+  </div>
+</header>
+
+<main>
+  <div id="banner" class="banner hidden"></div>
+
+  <!-- Filtros globais -->
+  <section class="filters" id="filters">
+    <label class="search">Buscar<input class="fld" id="fQ" placeholder="Nome, e-mail, telefone, observação…"></label>
+    <label>Entrada de<input type="date" class="fld" id="fDe"></label>
+    <label>Entrada até<input type="date" class="fld" id="fAte"></label>
+    <label>Mês de entrada<select class="fld" id="fMes"></select></label>
+    <label>Status<select class="fld" id="fStatus"></select></label>
+    <label>Origem do lead<select class="fld" id="fOrigem"></select></label>
+    <label>Campanha<select class="fld" id="fCampanha"></select></label>
+    <label>Frase de origem<select class="fld" id="fFrase"></select></label>
+    <label>Unidade<select class="fld" id="fUnidade"></select></label>
+    <label>Motivo não agend.<select class="fld" id="fMotivo"></select></label>
+    <label>Responsável<select class="fld" id="fResp"></select></label>
+    <label>Cadastro<select class="fld" id="fFonte"><option value="">Todos</option><option value="planilha">Planilha RD</option><option value="avulso">Avulso</option></select></label>
+    <div class="actions"><button class="btn" id="fClear">Limpar filtros</button></div>
+  </section>
+
+  <!-- DASHBOARD -->
+  <section id="v-dashboard">
+    <div class="kpis" id="kpis"></div>
+    <div class="stack">
+      <div class="card"><div class="hd"><h3>Funil de conversão</h3><span class="sub">etapas alcançadas pelos leads filtrados</span></div><div class="bd"><div class="funnel" id="funnel"></div></div></div>
+      <div class="card"><div class="hd"><h3>Status atual</h3></div><div class="bd"><div class="hbars" id="statusBars"></div></div></div>
+    </div>
+    <div class="card" style="margin-bottom:14px">
+      <div class="hd"><h3>Evolução mensal</h3><span class="sub">por mês de entrada do lead</span></div>
+      <div class="bd">
+        <div class="legend"><span><i style="background:var(--s1)"></i>Leads</span><span><i style="background:var(--s2)"></i>Agendaram</span><span><i style="background:var(--s3)"></i>Fecharam pacote</span></div>
+        <div class="chart-box"><canvas id="chMonth" aria-label="Leads, agendamentos e fechamentos por mês" role="img"></canvas></div>
+      </div>
+    </div>
+    <div class="stack">
+      <div class="card"><div class="hd"><h3>Por origem do lead</h3></div><div class="bd tbl-wrap" id="tOrigem"></div></div>
+      <div class="card"><div class="hd"><h3>Motivos de não agendamento</h3><span class="sub" id="motivoSub"></span></div><div class="bd"><div class="hbars" id="motivoBars"></div></div></div>
+    </div>
+    <div class="card" style="margin-bottom:14px"><div class="hd"><h3>Por campanha</h3><span class="sub">ordenado por nº de leads</span></div><div class="bd tbl-wrap" id="tCampanha"></div></div>
+    <div class="card" style="margin-bottom:14px"><div class="hd"><h3>Por frase de origem</h3><span class="sub">ordenado por nº de leads</span></div><div class="bd tbl-wrap" id="tFrase"></div></div>
+    <div class="stack">
+      <div class="card"><div class="hd"><h3>Por unidade</h3></div><div class="bd tbl-wrap" id="tUnidade"></div></div>
+      <div class="card"><div class="hd"><h3>Por responsável</h3></div><div class="bd tbl-wrap" id="tResp"></div></div>
+    </div>
+  </section>
+
+  <!-- LEADS -->
+  <section id="v-leads" class="hidden">
+    <div class="card">
+      <div class="toolbar">
+        <button class="btn primary" id="btnNew">+ Novo lead avulso</button>
+        <span class="count" id="leadCount"></span>
+        <span class="grow"></span>
+        <label class="muted" style="font-size:12px;color:var(--ink-3)">Por página
+          <select class="fld" id="pageSize" style="width:auto;display:inline-block;padding:4px 6px"><option>25</option><option selected>50</option><option>100</option><option>250</option></select>
+        </label>
+        <button class="btn" id="btnExport">Exportar Excel</button>
+      </div>
+      <div class="bulk hidden" id="bulk">
+        <b id="bulkN"></b> selecionado(s) —
+        <select class="fld" id="bulkStatus" style="width:auto"></select>
+        <select class="fld" id="bulkUnidade" style="width:auto"></select>
+        <select class="fld" id="bulkResp" style="width:auto"></select>
+        <button class="btn sm primary" id="bulkApply">Aplicar</button>
+        <button class="btn sm danger" id="bulkDel">Excluir</button>
+        <button class="btn sm" id="bulkClear">Limpar seleção</button>
+      </div>
+      <div class="tbl-wrap" style="max-height:68vh">
+        <table class="tbl" id="leadTable">
+          <thead><tr>
+            <th style="width:32px"><input type="checkbox" id="chkAll" aria-label="Selecionar página"></th>
+            <th class="sort" data-k="nome">Nome</th>
+            <th>Telefone</th>
+            <th>E-mail</th>
+            <th class="sort" data-k="origemLead">Origem</th>
+            <th class="sort" data-k="status">Status</th>
+            <th class="sort" data-k="unidade">Unidade</th>
+            <th class="sort" data-k="dataConsulta">Consulta</th>
+            <th class="sort" data-k="updatedAt">Atualizado</th>
+          </tr></thead>
+          <tbody id="leadBody"></tbody>
+        </table>
+      </div>
+      <div class="pager"><span id="pagerInfo"></span><span><button class="btn sm" id="pgPrev">‹ Anterior</button> <button class="btn sm" id="pgNext">Próxima ›</button></span></div>
+    </div>
+  </section>
+
+  <!-- IMPORTAR -->
+  <section id="v-importar" class="hidden">
+    <div class="card" style="margin-bottom:14px"><div class="bd">
+      <p class="note">Exporte a lista de leads do <b>RD Station Marketing</b> (Contatos → Leads → Exportar) e envie o arquivo aqui (.xlsx, .xls ou .csv). Leads já existentes (mesmo e-mail ou telefone) <b>não são duplicados</b>: só os campos vazios são completados, a data de entrada é atualizada pela planilha e o status/negociação que você já marcou é mantido. Datas são lidas no formato <b>DD/MM/AAAA</b>.</p>
+      <div class="drop" id="drop"><b>Arraste a planilha aqui ou clique para escolher</b><span>Base de leads · .xlsx .xls .csv</span></div>
+      <input type="file" id="file" accept=".xlsx,.xls,.csv" class="hidden">
+    </div></div>
+
+    <div class="card hidden" id="mapCard"><div class="hd"><h3>Mapeamento das colunas</h3><span class="sub" id="mapSub"></span></div><div class="bd">
+      <div id="sheetPick" style="margin-bottom:12px"></div>
+      <p class="note" style="margin:0 0 12px"><b>Todas as colunas da planilha são importadas</b> e ficam guardadas na ficha do lead (seção "Dados do RD Station"). Abaixo você só confere quais colunas alimentam os campos principais do CRM (filtros e dashboard).</p>
+      <div class="map-grid" id="mapGrid"></div>
+      <div class="map-grid" style="margin-top:14px">
+        <label>Origem padrão (se vazia)<input class="fld" id="defOrigem" value="RD Station"></label>
+        <label>Unidade padrão (se vazia e não identificada pela campanha)<select class="fld" id="defUnidade"></select></label>
+      </div>
+      <h3 style="margin:18px 0 8px;font-size:13px">Prévia (5 primeiras linhas)</h3>
+      <div class="tbl-wrap" id="preview"></div>
+      <div class="stats-inline" id="impStats"></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn primary" id="btnImport">Importar leads</button><button class="btn" id="btnCancelImp">Cancelar</button></div>
+      <div class="progress hidden" id="impProg"><i></i></div>
+      <div id="impMsg" style="margin-top:8px;font-size:13px"></div>
+    </div></div>
+  </section>
+
+  <!-- CONFIG -->
+  <section id="v-config" class="hidden">
+    <div class="card" style="margin-bottom:14px"><div class="bd">
+      <p class="note" style="margin-top:0">Uma opção por linha. Essas listas aparecem nos formulários e filtros (origem e campanha aceitam valores novos digitados; a <b>frase de origem</b> só aceita as frases cadastradas aqui).</p>
+      <div class="cfg-grid">
+        <label class="form" style="display:flex;flex-direction:column;gap:4px;font-weight:600;font-size:12px;color:var(--ink-2)">Origens do lead<textarea class="fld" id="cfgOrigens"></textarea></label>
+        <label style="display:flex;flex-direction:column;gap:4px;font-weight:600;font-size:12px;color:var(--ink-2)">Campanhas<textarea class="fld" id="cfgCampanhas"></textarea></label>
+        <label style="display:flex;flex-direction:column;gap:4px;font-weight:600;font-size:12px;color:var(--ink-2)">Motivos de não agendamento / perda<textarea class="fld" id="cfgMotivos"></textarea></label>
+        <label style="display:flex;flex-direction:column;gap:4px;font-weight:600;font-size:12px;color:var(--ink-2)">Frases de origem<textarea class="fld" id="cfgFrases" placeholder="Ex.: queda de cabelo&#10;transplante capilar"></textarea></label>
+        <label style="display:flex;flex-direction:column;gap:4px;font-weight:600;font-size:12px;color:var(--ink-2)">Unidades<textarea class="fld" id="cfgUnidades"></textarea></label>
+        <label style="display:flex;flex-direction:column;gap:4px;font-weight:600;font-size:12px;color:var(--ink-2)">Responsáveis (atendimento)<textarea class="fld" id="cfgResp"></textarea></label>
+      </div>
+      <div style="margin-top:14px"><button class="btn primary" id="btnSaveCfg">Salvar configurações</button></div>
+    </div></div>
+    <div class="card" style="margin-bottom:14px"><div class="hd"><h3>Backup completo</h3></div><div class="bd">
+      <p style="margin-top:0;color:var(--ink-2)">Arquivo com todos os leads (status, valores, histórico, dados do RD) e as configurações. Use para guardar uma cópia ou para levar a base para outra versão do CRM (ex.: Firebase).</p>
+      <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn primary" id="btnBackup">Exportar backup (.json)</button><button class="btn" id="btnRestore">Restaurar backup</button><input type="file" id="fileRestore" accept=".json,application/json" class="hidden"></div>
+      <div id="restoreMsg" style="margin-top:8px;font-size:13px"></div>
+    </div></div>
+    <div class="card"><div class="hd"><h3>Zona de perigo</h3></div><div class="bd">
+      <p style="margin-top:0;color:var(--ink-2)">Apaga todos os leads da base. Exporte antes se quiser guardar uma cópia.</p>
+      <button class="btn danger" id="btnWipe">Apagar todos os leads</button>
+    </div></div>
+  </section>
+</main>
+
+<div class="overlay hidden" id="login" style="align-items:center;background:var(--brand)">
+  <form class="modal sm" id="lgForm" autocomplete="on" style="padding:6px 0">
+    <div class="mh"><h2>TricoMaster CRM</h2></div>
+    <div class="mb form" style="grid-template-columns:1fr">
+      <label>E-mail<input class="fld" id="lgEmail" type="email" autocomplete="username" required></label>
+      <label>Senha<input class="fld" id="lgSenha" type="password" autocomplete="current-password" required></label>
+      <div id="lgMsg" style="font-size:13px;color:var(--danger);min-height:18px"></div>
+    </div>
+    <div class="mf"><button type="button" class="btn" id="lgReset">Esqueci minha senha</button><button class="btn primary" id="lgBtn">Entrar</button></div>
+  </form>
+</div>
+<div id="modalRoot"></div>
+<div id="toastRoot"></div>
+
+<script>
+(function(){
+"use strict";
+
+/* ===================== Constantes ===================== */
+const STATUS = [
+  {k:"novo",        l:"Novo",               r:0},
+  {k:"contato",     l:"Em contato",         r:1},
+  {k:"agendou",     l:"Consulta agendada",  r:2},
+  {k:"compareceu",  l:"Consulta realizada", r:3},
+  {k:"negociacao",  l:"Em negociação",      r:4},
+  {k:"fechou",      l:"Pacote fechado",     r:5},
+  {k:"nao_agendou", l:"Não agendou",        r:1},
+  {k:"perdido",     l:"Perdido (não fechou)", r:-1}
+];
+const ST = Object.fromEntries(STATUS.map(s=>[s.k,s]));
+const stOf = k => ST[k] || ST.novo; // status desconhecido/corrompido nunca derruba a tela
+
+const MILESTONES = [ // etapas do funil
+  {k:"contato",l:"Contato feito",r:1},
+  {k:"agendou",l:"Agendou consulta",r:2},
+  {k:"compareceu",l:"Compareceu",r:3},
+  {k:"negociacao",l:"Negociação",r:4},
+  {k:"fechou",l:"Fechou pacote",r:5}
+];
+const NEEDS_MOTIVO = new Set(["nao_agendou","perdido"]);
+const DEFAULT_CFG = {
+  origens:["RD Station","Instagram","Facebook Ads","Google Ads","Site","WhatsApp","Indicação","Orgânico","Outros"],
+  campanhas:[],
+  motivos:["Preço / valor","Não respondeu","Distância / localização","Sem disponibilidade de horário","Apenas pesquisando","Já faz tratamento em outro lugar","Número inválido","Sem interesse","Outro"],
+  frases:[],
+  unidades:["Tatuapé","Santana"],
+  resp:[]
+};
+const FIELDS_IMPORT = [
+  {k:"nome",l:"Nome",re:[/^nome$/i,/^nome/i,/name/i]},
+  {k:"email",l:"E-mail",re:[/^e-?mail$/i,/e-?mail/i]},
+  {k:"telefone",l:"Telefone / Celular",re:[/^telefone principal$/i,/^telefone$/i,/^celular$/i,/whats/i,/telefone|celular|phone|fone/i]},
+  {k:"cidade",l:"Cidade",re:[/^cidade$/i,/cidade|city/i]},
+  {k:"dataEntrada",l:"Data de entrada",re:[/data.*primeira.*convers/i,/data.*cria/i,/criado|created/i,/data.*convers/i,/^data$/i,/data/i]},
+  {k:"origemLead",l:"Origem do lead",re:[/origem.*primeira/i,/^origem$/i,/utm_source|fonte|source/i,/origem/i]},
+  {k:"origemCampanha",l:"Origem da campanha",re:[/utm_campaign/i,/campanha|campaign/i,/identificador.*primeira/i,/identificador.*convers/i,/convers[aã]o/i]},
+  {k:"unidade",l:"Unidade",re:[/^unidade/i,/^cl[ií]nica/i]},
+  {k:"observacoes",l:"Observações",re:[/observa|obs\b|notas?/i]}
+];
+
+/* ===================== Estado ===================== */
+let db=null, mode="connecting";
+const busy={export:false,bulk:false,cfg:false,wipe:false,import:false}; // trava contra clique duplo
+let LEADS=[];            // array derivado
+let CFG=JSON.parse(JSON.stringify(DEFAULT_CFG));
+let view="dashboard";
+let sortK="dataEntrada", sortDir=-1, page=0;
+let selected=new Set();
+let chart=null;
+let imp=null;            // estado da importação
+
+/* ===================== Utils ===================== */
+const $=s=>document.querySelector(s);
+const esc=s=>String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const norm=s=>String(s||"").normalize("NFD").replace(/[̀-ͯ]/g,"").toLowerCase().trim();
+const digits=s=>String(s||"").replace(/\D/g,"");
+const nowISO=()=>new Date().toISOString();
+const brl=v=>(Number(v)||0).toLocaleString("pt-BR",{style:"currency",currency:"BRL",maximumFractionDigits:0});
+const pct=(a,b)=>b?Math.round(a/b*1000)/10:0;
+const pctS=(a,b)=>b?(pct(a,b).toLocaleString("pt-BR")+"%"):"—";
+const fmtD=iso=>{const m=String(iso||"").match(/^(\d{4})-(\d{2})-(\d{2})/);return m?`${m[3]}/${m[2]}/${m[1]}`:""};
+const fmtT=iso=>{const m=String(iso||"").match(/T(\d{2}:\d{2})/);return m?m[1]:""};
+const MES=["jan","fev","mar","abr","mai","jun","jul","ago","set","out","nov","dez"];
+function hash(str,seed){let h=seed||2166136261;for(let i=0;i<str.length;i++){h^=str.charCodeAt(i);h=Math.imul(h,16777619)}return (h>>>0).toString(36)}
+const hash64=str=>hash(str)+hash(str,0x811c9dc5^0x5bd1e995); // 64 bits: evita dois e-mails gerarem o mesmo id
+function leadKey(l){const e=norm(l.email);if(e&&e.includes("@"))return "e:"+e;const p=digits(l.telefone);if(p.length>=8)return "p:"+p.slice(-11);return null}
+function newId(l){const k=leadKey(l);return "l"+(k?hash64(k):hash64(Math.random()+":"+Date.now()))+(k?"":"r")}
+const debounce=(fn,ms)=>{let t;return(...a)=>{clearTimeout(t);t=setTimeout(()=>fn(...a),ms)}};
+const toNum=v=>{const n=Number(v);return v===""||v==null||!isFinite(n)?"":Math.max(0,Math.round(n*100)/100)};
+const isEmail=v=>/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
+function toast(msg,err){const t=document.createElement("div");t.className="toast"+(err?" err":"");t.textContent=msg;$("#toastRoot").appendChild(t);setTimeout(()=>t.remove(),err?5000:2600)}
+function phoneFmt(p){const d=digits(p);if(d.length===13&&d.startsWith("55"))return phoneFmt(d.slice(2));if(d.length===11)return `(${d.slice(0,2)}) ${d.slice(2,7)}-${d.slice(7)}`;if(d.length===10)return `(${d.slice(0,2)}) ${d.slice(2,6)}-${d.slice(6)}`;return p||""}
+function parseDate(v){
+  if(v==null||v==="")return "";
+  if(v instanceof Date&&!isNaN(v)){return new Date(v.getTime()-v.getTimezoneOffset()*60000).toISOString().slice(0,10)}
+  if(typeof v==="number"&&v>20000&&v<80000){const d=new Date((Math.floor(v)-25569)*86400000);return d.toISOString().slice(0,10)}
+  if(typeof v==="string"&&/^\d{5}(\.\d+)?$/.test(v.trim()))return parseDate(Number(v));
+  const s=String(v).trim();
+  let m=s.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{2,4})/); // sempre DD/MM/AAAA
+  if(m){let y=+m[3];if(y<100)y+=2000;return validYMD(y,+m[2],+m[1])}
+  m=s.match(/^(\d{4})-(\d{2})-(\d{2})/);if(m)return validYMD(+m[1],+m[2],+m[3]);
+  return "";
+}
+function validYMD(y,mo,d){ // rejeita 31/02, mês 13 etc.
+  const dt=new Date(Date.UTC(y,mo-1,d));
+  if(dt.getUTCFullYear()!==y||dt.getUTCMonth()!==mo-1||dt.getUTCDate()!==d)return "";
+  return `${y}-${String(mo).padStart(2,"0")}-${String(d).padStart(2,"0")}`;
+}
+function applyStatus(l,s){
+  if(!ST[s])s="novo";
+  const prev=l.status||"novo";l.status=s;l.marcos=l.marcos||{};
+  if(s==="perdido"){ if(!l.marcos.contato)l.marcos.contato=true; }
+  else{const r=ST[s].r;MILESTONES.forEach(m=>{l.marcos[m.k]=m.r<=r})}
+  if(prev!==s){l.hist=(l.hist||[]).concat([{t:nowISO(),txt:`Status: ${stOf(prev).l} → ${ST[s].l}`}]).slice(-40)}
+}
+
+/* ===================== Firebase: configuração ===================== */
+<script type="module">
+  // Import the functions you need from the SDKs you need
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/13.4.0/firebase-app.js";
+  // TODO: Add SDKs for Firebase products that you want to use
+  // https://firebase.google.com/docs/web/setup#available-libraries
+
+  // Your web app's Firebase configuration
+  const firebaseConfig = {
+    apiKey: "AIzaSyABuPvjz5izIPNC9wfsOnXGmkp77lFQLPk",
+    authDomain: "tricomaster-crm---leads.firebaseapp.com",
+    projectId: "tricomaster-crm---leads",
+    storageBucket: "tricomaster-crm---leads.firebasestorage.app",
+    messagingSenderId: "779448618237",
+    appId: "1:779448618237:web:c81b6da2bee48976ffc294"
+  };
+
+  // Initialize Firebase
+  const app = initializeApp(firebaseConfig);
+</script>
+const FB_VERSION = "10.12.2";
+const COL_LEADS = "leads";            // 1 documento por lead
+const DOC_CFG = ["config","listas"];  // listas de opções
+const BATCH_SIZE = 400;               // limite do Firestore: 500 operações por lote
+
+/* ===================== Firebase: conexão e sessão ===================== */
+let fb=null;                 // {au, fs, auth}
+let user=null;
+let leadsById={};            // cache em memória, alimentado pelo listener
+let unsubLeads=null, unsubCfg=null;
+let onWriteProgress=null;
+
+function rebuild(){LEADS=Object.entries(leadsById).map(([id,l])=>Object.assign({id},l))}
+function setSync(cls,txt){const s=$("#sync");s.className="sync "+cls;$("#syncTxt").textContent=txt}
+function sanitizeCfg(o){
+  const c=Object.assign({},DEFAULT_CFG);
+  for(const k in DEFAULT_CFG){const v=o&&o[k];if(Array.isArray(v))c[k]=v.filter(x=>typeof x==="string"&&x.trim()).map(x=>x.trim())}
+  return c;
+}
+async function loadFirebase(){
+  const base=`https://www.gstatic.com/firebasejs/${FB_VERSION}/`;
+  const [app,au,fs]=await Promise.all([import(base+"firebase-app.js"),import(base+"firebase-auth.js"),import(base+"firebase-firestore.js")]);
+  const fbApp=app.getApps().length?app.getApp():app.initializeApp(firebaseConfig); // nunca inicializa duas vezes
+  let firestore;
+  try{ // cache local: abre rápido, funciona offline e evita reler tudo do servidor
+    firestore=fs.initializeFirestore(fbApp,{localCache:fs.persistentLocalCache({tabManager:fs.persistentMultipleTabManager()})});
+  }catch(e){firestore=fs.getFirestore(fbApp)}
+  return {au,fs,auth:au.getAuth(fbApp),db:firestore};
+}
+async function initDb(){
+  if(!firebaseConfig.apiKey||firebaseConfig.apiKey==="COLE_AQUI"){showSetup();return}
+  setSync("warn","Conectando…");
+  try{fb=await loadFirebase();db=fb.db;mode="db"}
+  catch(e){console.error(e);setSync("err","Falha ao carregar o Firebase");toast("Não foi possível carregar o Firebase. Verifique a internet.",true);return}
+  fb.au.onAuthStateChanged(fb.auth,u=>{
+    user=u;
+    if(u){hideLogin();$("#userBox").classList.remove("hidden");$("#userEmail").textContent=u.email||"";startListeners()}
+    else{stopListeners();leadsById={};rebuild();renderAll();$("#userBox").classList.add("hidden");showLogin()}
+  });
+  window.addEventListener("online",()=>setSync("warn","Reconectando…"));
+  window.addEventListener("offline",()=>setSync("warn","Sem internet — alterações serão enviadas ao voltar"));
+}
+function startListeners(){
+  stopListeners();
+  const {fs}=fb;
+  setSync("warn","Carregando…");
+  let timer=setTimeout(()=>setSync("warn","Sem resposta do servidor ainda…"),10000);
+  unsubLeads=fs.onSnapshot(fs.collection(db,COL_LEADS),{includeMetadataChanges:true},snap=>{
+    const ch=snap.docChanges();
+    ch.forEach(c=>{if(c.type==="removed")delete leadsById[c.doc.id];else leadsById[c.doc.id]=c.doc.data()});
+    if(ch.length){rebuild();renderAll()}
+    if(!snap.metadata.fromCache){clearTimeout(timer)}
+    const n=LEADS.length.toLocaleString("pt-BR");
+    if(snap.metadata.hasPendingWrites)setSync("warn",`Sincronizando… · ${n} leads`);
+    else if(snap.metadata.fromCache)setSync("warn",navigator.onLine?`Carregando… · ${n} leads`:`Offline · ${n} leads (cache)`);
+    else setSync("ok",`Sincronizado · ${n} leads`);
+  },err=>{clearTimeout(timer);handleListenErr(err)});
+  unsubCfg=fs.onSnapshot(fs.doc(db,...DOC_CFG),snap=>{
+    CFG=snap.exists()?sanitizeCfg(snap.data()):JSON.parse(JSON.stringify(DEFAULT_CFG));
+    fillSelects();renderAll();if(view==="config")fillCfg();
+  },err=>console.warn("config",err));
+}
+function stopListeners(){if(unsubLeads){unsubLeads();unsubLeads=null}if(unsubCfg){unsubCfg();unsubCfg=null}}
+function handleListenErr(err){
+  console.error(err);
+  if(err&&err.code==="permission-denied"){
+    setSync("err","Acesso não liberado");
+    $("#banner").innerHTML=`Seu usuário entrou, mas ainda não foi liberado para acessar os leads. Peça ao administrador para criar no Firestore o documento <b>usuarios/${esc(user&&user.uid)}</b>.`;
+    $("#banner").classList.remove("hidden");
+  }else{setSync("err","Erro de conexão — recarregue a página");toast("Erro ao carregar leads: "+(err.message||err.code),true)}
+}
+
+/* ===================== Firebase: gravação ===================== */
+const clean=o=>JSON.parse(JSON.stringify(o)); // remove undefined (o Firestore recusa)
+// Grava {id: lead | {_del:true}} em lotes. Offline, o SDK guarda na fila e envia quando a conexão voltar.
+async function saveLeads(map){
+  const ids=Object.keys(map);if(!ids.length)return;
+  if(!user){toast("Faça login para salvar.",true);throw{code:"unauthenticated"}}
+  const {fs}=fb;const by=user.email||user.uid;let done=0,pend=false;
+  for(let i=0;i<ids.length;i+=BATCH_SIZE){
+    const part=ids.slice(i,i+BATCH_SIZE);const batch=fs.writeBatch(db);
+    part.forEach(id=>{const v=map[id];const ref=fs.doc(db,COL_LEADS,id);
+      if(!v||v._del)batch.delete(ref);else{const body=clean(v);delete body.id;body.updatedBy=by;batch.set(ref,body)}});
+    const commit=batch.commit();
+    let r;
+    try{r=await Promise.race([commit.then(()=>"ok"),new Promise(res=>setTimeout(()=>res("pendente"),15000))])}
+    catch(e){handleWriteErr(e);throw e}
+    if(r==="pendente"){pend=true;commit.catch(handleWriteErr)}
+    done+=part.length;if(onWriteProgress)onWriteProgress(done,ids.length);
+  }
+  if(pend)toast("Sem resposta do servidor: as alterações ficaram na fila e serão enviadas automaticamente.",true);
+}
+function handleWriteErr(e){
+  const c=e&&e.code;
+  if(c==="permission-denied")toast("Sem permissão para gravar. Verifique se seu usuário está liberado.",true);
+  else if(c==="resource-exhausted")toast("Limite do Firebase atingido no momento. Tente mais tarde.",true);
+  else if(c==="invalid-argument")toast("O servidor recusou os dados: "+(e.message||""),true);
+  else if(c==="unauthenticated")return;
+  else toast("Erro ao salvar: "+((e&&e.message)||c||"desconhecido"),true);
+}
+async function saveCfg(){
+  if(!user)return false;
+  const {fs}=fb;
+  try{await Promise.race([fs.setDoc(fs.doc(db,...DOC_CFG),clean(CFG)),new Promise(r=>setTimeout(r,15000))]);return true}
+  catch(e){handleWriteErr(e);return false}
+}
+
+/* ===================== Login ===================== */
+function showLogin(){$("#login").classList.remove("hidden");setTimeout(()=>{const e=$("#lgEmail");e&&e.focus()},50)}
+function hideLogin(){$("#login").classList.add("hidden");$("#lgSenha").value="";$("#lgMsg").textContent=""}
+function showSetup(){
+  setSync("err","Firebase não configurado");
+  $("#banner").innerHTML="Falta configurar o Firebase: abra o <b>index.html</b>, procure <b>firebaseConfig</b> e cole os dados do seu projeto (veja o LEIAME).";
+  $("#banner").classList.remove("hidden");
+}
+const AUTH_MSG={"auth/invalid-credential":"E-mail ou senha incorretos.","auth/invalid-email":"E-mail inválido.","auth/user-disabled":"Usuário desativado.","auth/too-many-requests":"Muitas tentativas. Aguarde alguns minutos.","auth/network-request-failed":"Sem conexão com a internet.","auth/missing-password":"Informe a senha."};
+async function doLogin(e){
+  e.preventDefault();if(!fb)return;
+  const email=$("#lgEmail").value.trim(),senha=$("#lgSenha").value;
+  if(!isEmail(email)){$("#lgMsg").textContent="Informe um e-mail válido.";return}
+  const btn=$("#lgBtn");btn.disabled=true;$("#lgMsg").textContent="";
+  try{await fb.au.signInWithEmailAndPassword(fb.auth,email,senha)}
+  catch(err){$("#lgMsg").textContent=AUTH_MSG[err.code]||("Não foi possível entrar ("+err.code+").")}
+  finally{btn.disabled=false}
+}
+async function doReset(){
+  const email=$("#lgEmail").value.trim();
+  if(!isEmail(email)){$("#lgMsg").textContent="Digite seu e-mail acima para receber o link.";return}
+  try{await fb.au.sendPasswordResetEmail(fb.auth,email);$("#lgMsg").textContent="Se o e-mail estiver cadastrado, você receberá um link para criar nova senha."}
+  catch(err){$("#lgMsg").textContent=AUTH_MSG[err.code]||err.code}
+}
+async function doLogout(){
+  stopListeners();
+  try{await fb.au.signOut(fb.auth)}catch(e){}
+  // apaga a cópia local dos dados de pacientes deste computador
+  try{await fb.fs.terminate(db);await fb.fs.clearIndexedDbPersistence(db)}catch(e){}
+  location.reload();
+}
+
+/* ===================== Opções / selects ===================== */
+function distinct(field){const s=new Set();LEADS.forEach(l=>{if(l[field])s.add(l[field])});return [...s].sort((a,b)=>a.localeCompare(b,"pt-BR"))}
+function union(a,b){const s=new Set([...(a||[])]);(b||[]).forEach(x=>s.add(x));return [...s]}
+function opts(list,all,cur){return (all?`<option value="">${all}</option>`:"")+list.map(v=>`<option value="${esc(v)}"${v===cur?" selected":""}>${esc(v)}</option>`).join("")}
+function fillSel(id,list,all){const el=$(id);const cur=el.value;el.innerHTML=opts(list,all,cur);if([...el.options].some(o=>o.value===cur))el.value=cur}
+function fillSelects(){
+  $("#fStatus").innerHTML=`<option value="">Todos</option><option value="__aberto">Em aberto (sem desfecho)</option>`+STATUS.map(s=>`<option value="${s.k}">${s.l}</option>`).join("");
+  $("#fStatus").value=filters.status||"";
+  fillSel("#fOrigem",union(CFG.origens,distinct("origemLead")).concat(["(vazio)"]),"Todas");
+  {const el=$("#fMes"),cur=el.value;const ms=[...new Set(LEADS.map(l=>(l.dataEntrada||"").slice(0,7)).filter(Boolean))].sort().reverse();
+   el.innerHTML=`<option value="">Todos</option>`+ms.map(m=>{const [y,mo]=m.split("-");return `<option value="${m}"${m===cur?" selected":""}>${MES[+mo-1]}/${y}</option>`}).join("");}
+  fillSel("#fFrase",(CFG.frases||[]).concat(["(vazio)"]),"Todas");
+  fillSel("#fCampanha",union(CFG.campanhas,distinct("origemCampanha")).concat(["(vazio)"]),"Todas");
+  fillSel("#fUnidade",union(CFG.unidades,distinct("unidade")).concat(["(vazio)"]),"Todas");
+  fillSel("#fMotivo",union(CFG.motivos,distinct("motivo")),"Todos");
+  fillSel("#fResp",union(CFG.resp,distinct("responsavel")).concat(["(vazio)"]),"Todos");
+  $("#bulkStatus").innerHTML=`<option value="">Status…</option>`+STATUS.filter(s=>!NEEDS_MOTIVO.has(s.k)).map(s=>`<option value="${s.k}">${s.l}</option>`).join("");
+  $("#bulkUnidade").innerHTML=opts(CFG.unidades,"Unidade…");
+  $("#bulkResp").innerHTML=opts(CFG.resp,"Responsável…");
+}
+
+/* ===================== Filtros ===================== */
+const filters={mes:"",frase:"",q:"",de:"",ate:"",status:"",origem:"",campanha:"",unidade:"",motivo:"",resp:"",fonte:""};
+const FMAP={fMes:"mes",fFrase:"frase",fQ:"q",fDe:"de",fAte:"ate",fStatus:"status",fOrigem:"origem",fCampanha:"campanha",fUnidade:"unidade",fMotivo:"motivo",fResp:"resp",fFonte:"fonte"};
+// só valem frases cadastradas manualmente em Configurações
+const fraseOf=l=>(l.fraseOrigem&&(CFG.frases||[]).includes(l.fraseOrigem))?l.fraseOrigem:"";
+function matchVal(fv,v){if(!fv)return true;if(fv==="(vazio)")return !v;return v===fv}
+function filtered(){
+  const q=norm(filters.q);const qd=digits(filters.q);
+  return LEADS.filter(l=>{
+    if(filters.de&&(!l.dataEntrada||l.dataEntrada<filters.de))return false;
+    if(filters.ate&&(!l.dataEntrada||l.dataEntrada>filters.ate))return false;
+    if(filters.status){if(filters.status==="__aberto"){if(["fechou","nao_agendou","perdido"].includes(l.status))return false}else if(stOf(l.status).k!==filters.status)return false}
+    if(!matchVal(filters.origem,l.origemLead))return false;
+    if(!matchVal(filters.campanha,l.origemCampanha))return false;
+    if(!matchVal(filters.frase,fraseOf(l)))return false;
+    if(filters.mes&&(l.dataEntrada||"").slice(0,7)!==filters.mes)return false;
+    if(!matchVal(filters.unidade,l.unidade))return false;
+    if(!matchVal(filters.motivo,l.motivo))return false;
+    if(!matchVal(filters.resp,l.responsavel))return false;
+    if(filters.fonte&&(l.fonte||"planilha")!==filters.fonte)return false;
+    if(q){const hay=norm([l.nome,l.email,l.cidade,l.observacoes,fraseOf(l),l.origemCampanha].concat((l.extras||[]).map(x=>x.v)).join(" "));if(!hay.includes(q)&&!(qd.length>=4&&digits(l.telefone).includes(qd)))return false}
+    return true;
+  });
+}
+
+/* ===================== Dashboard ===================== */
+function hbarsHTML(rows,total,color){
+  if(!rows.length)return `<div class="empty">Sem dados para os filtros atuais</div>`;
+  const max=Math.max(...rows.map(r=>r[1]))||1;
+  return rows.map(([n,v])=>`<div class="hbar" title="${esc(n)}: ${v} (${pctS(v,total)})"><span class="nm">${esc(n)}</span><span class="track"><span class="fill" style="display:block;width:${v/max*100}%;${color?`background:${color}`:""}"></span></span><span class="num">${v.toLocaleString("pt-BR")}<span>${pctS(v,total)}</span></span></div>`).join("");
+}
+function groupTable(list,field,label,emptyLabel){
+  const get=typeof field==="function"?field:(l=>l[field]);
+  const g={};list.forEach(l=>{const k=get(l)||emptyLabel;const o=g[k]=g[k]||{n:0,ag:0,fe:0,rec:0,na:0};o.n++;o.rc=(o.rc||0)+(Number(l.valorConsulta)||0);const m=l.marcos||{};if(m.agendou)o.ag++;if(m.fechou){o.fe++;o.rec+=Number(l.valor)||0}if(l.status==="nao_agendou")o.na++});
+  const rows=Object.entries(g).sort((a,b)=>b[1].n-a[1].n);
+  if(!rows.length)return `<div class="empty">Sem dados para os filtros atuais</div>`;
+  const max=rows[0][1].n;
+  return `<table class="tbl"><thead><tr><th>${label}</th><th class="num">Leads</th><th class="num">Agendaram</th><th class="num">Tx. agend.</th><th class="num">Fecharam</th><th class="num">Tx. fech.</th><th class="num">Consultas R$</th><th class="num">Pacotes R$</th></tr></thead><tbody>`+
+    rows.map(([k,o])=>`<tr><td><div class="mini"><span style="min-width:90px;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(k)}">${esc(k)}</span><span class="tr"><i style="width:${o.n/max*100}%"></i></span></div></td><td class="num">${o.n}</td><td class="num">${o.ag}</td><td class="num">${pctS(o.ag,o.n)}</td><td class="num">${o.fe}</td><td class="num">${pctS(o.fe,o.n)}</td><td class="num">${o.rc?brl(o.rc):"—"}</td><td class="num">${o.rec?brl(o.rec):"—"}</td></tr>`).join("")+`</tbody></table>`;
+}
+const RAMP=["#86b6ef","#5598e7","#2a78d6","#1c5cab","#104281","#0d366b"];
+function renderDashboard(){
+  const L=filtered();const n=L.length;
+  const c=k=>L.filter(l=>(l.marcos||{})[k]).length;
+  const ag=c("agendou"),comp=c("compareceu"),neg=L.filter(l=>l.status==="negociacao").length,fe=c("fechou");
+  const rec=L.filter(l=>(l.marcos||{}).fechou).reduce((s,l)=>s+(Number(l.valor)||0),0);
+  const recC=L.reduce((s,l)=>s+(Number(l.valorConsulta)||0),0);const nC=L.filter(l=>Number(l.valorConsulta)>0).length;
+  const naoAg=L.filter(l=>l.status==="nao_agendou").length;
+  const novos=L.filter(l=>stOf(l.status).k==="novo").length;
+  const k=(lbl,val,hint)=>`<div class="card kpi"><div class="lbl">${lbl}</div><div class="val">${val}</div><div class="hint" title="${esc(hint||"")}">${hint||"&nbsp;"}</div></div>`;
+  $("#kpis").innerHTML=
+    k("Leads",n.toLocaleString("pt-BR"),`${novos} sem contato ainda`)+
+    k("Agendaram consulta",ag.toLocaleString("pt-BR"),`${pctS(ag,n)} dos leads`)+
+    k("Compareceram",comp.toLocaleString("pt-BR"),`${pctS(comp,ag)} dos agendados`)+
+    k("Em negociação",neg.toLocaleString("pt-BR"),"status atual")+
+    k("Pacotes fechados",fe.toLocaleString("pt-BR"),`${pctS(fe,comp||ag)} ${comp?"das consultas":"dos agendados"}`)+
+    k("Receita de consultas",brl(recC),nC?`${nC} consulta(s) com valor · média ${brl(recC/nC)}`:"informe o valor da consulta no lead")+
+    k("Receita de pacotes",brl(rec),(()=>{const nv=L.filter(l=>(l.marcos||{}).fechou&&Number(l.valor)>0).length;return nv?`ticket médio ${brl(rec/nv)}${nv<fe?` · ${fe-nv} sem valor`:""}`:""})())+
+    k("Não agendaram",naoAg.toLocaleString("pt-BR"),`${pctS(naoAg,n)} dos leads`);
+
+  // funil
+  const steps=[{l:"Leads",v:n}].concat(MILESTONES.map(m=>({l:m.l,v:c(m.k)})));
+  $("#funnel").innerHTML=n?steps.map((s,i)=>`<div class="fstep"><span class="nm">${s.l}</span><span><span class="bar" style="width:${Math.max(s.v/n*100,3)}%;background:${RAMP[i]};${i===0?"color:#0d366b":""}">${s.v.toLocaleString("pt-BR")}</span></span><span class="pct">${i?`<b>${pctS(s.v,n)}</b> do total · ${pctS(s.v,steps[i-1].v)} etapa`:""}</span></div>`).join(""):`<div class="empty">Nenhum lead — importe a planilha ou cadastre um lead avulso.</div>`;
+
+  // status
+  const sc={};L.forEach(l=>{const s=stOf(l.status).k;sc[s]=(sc[s]||0)+1});
+  $("#statusBars").innerHTML=hbarsHTML(STATUS.filter(s=>sc[s.k]).map(s=>[s.l,sc[s.k]]),n);
+
+  // motivos
+  const mc={};L.filter(l=>NEEDS_MOTIVO.has(l.status)).forEach(l=>{const m=l.motivo||"(sem motivo informado)";mc[m]=(mc[m]||0)+1});
+  const mt=Object.values(mc).reduce((a,b)=>a+b,0);
+  $("#motivoSub").textContent=mt?`${mt} leads não agendados/perdidos`:"";
+  $("#motivoBars").innerHTML=hbarsHTML(Object.entries(mc).sort((a,b)=>b[1]-a[1]),mt,"var(--s2)");
+
+  $("#tOrigem").innerHTML=groupTable(L,"origemLead","Origem","(sem origem)");
+  $("#tCampanha").innerHTML=groupTable(L,"origemCampanha","Campanha","(sem campanha)");
+  $("#tFrase").innerHTML=groupTable(L,fraseOf,"Frase de origem","(sem frase)");
+  $("#tUnidade").innerHTML=groupTable(L,"unidade","Unidade","(sem unidade)");
+  $("#tResp").innerHTML=groupTable(L,"responsavel","Responsável","(sem responsável)");
+
+  // mensal
+  const mm={};L.forEach(l=>{if(!l.dataEntrada)return;const key=l.dataEntrada.slice(0,7);const o=mm[key]=mm[key]||[0,0,0];o[0]++;if((l.marcos||{}).agendou)o[1]++;if((l.marcos||{}).fechou)o[2]++});
+  let keys=Object.keys(mm).sort();if(keys.length>24)keys=keys.slice(-24);
+  const labels=keys.map(k=>{const [y,m]=k.split("-");return MES[+m-1]+"/"+y.slice(2)});
+  const ds=[0,1,2].map(i=>keys.map(k=>mm[k][i]));
+  if(window.Chart){
+    const cfg={type:"bar",data:{labels,datasets:[
+      {label:"Leads",data:ds[0],backgroundColor:"#2a78d6",borderRadius:{topLeft:4,topRight:4},maxBarThickness:28,borderSkipped:"bottom"},
+      {label:"Agendaram",data:ds[1],backgroundColor:"#eb6834",borderRadius:{topLeft:4,topRight:4},maxBarThickness:28,borderSkipped:"bottom"},
+      {label:"Fecharam pacote",data:ds[2],backgroundColor:"#1baf7a",borderRadius:{topLeft:4,topRight:4},maxBarThickness:28,borderSkipped:"bottom"}]},
+      options:{responsive:true,maintainAspectRatio:false,animation:false,interaction:{mode:"index",intersect:false},
+        plugins:{legend:{display:false},tooltip:{backgroundColor:"#16201b",padding:10,callbacks:{afterBody:items=>{const i=items[0].dataIndex;return `Tx. agendamento: ${pctS(ds[1][i],ds[0][i])}\nTx. fechamento: ${pctS(ds[2][i],ds[0][i])}`}}}},
+        scales:{x:{grid:{display:false},ticks:{color:"#7d847f"}},y:{beginAtZero:true,grid:{color:"#ecebe5"},border:{display:false},ticks:{color:"#7d847f",precision:0}}},
+        datasets:{bar:{categoryPercentage:.7,barPercentage:.9}}}};
+    if(chart){chart.data=cfg.data;chart.options.plugins.tooltip.callbacks=cfg.options.plugins.tooltip.callbacks;chart.update()}
+    else chart=new Chart($("#chMonth"),cfg);
+  }
+}
+
+/* ===================== Tabela de leads ===================== */
+function statusSelect(l){
+  const s=stOf(l.status).k;
+  return `<select class="st-sel st-${s}" data-id="${esc(l.id)}" aria-label="Status">${STATUS.map(x=>`<option value="${x.k}"${x.k===s?" selected":""}>${x.l}</option>`).join("")}</select>`;
+}
+function renderLeads(){
+  let L=filtered();
+  const k=sortK;
+  L.sort((a,b)=>{let va=a[k],vb=b[k];if(k==="valor"){va=+va||0;vb=+vb||0;return (va-vb)*sortDir}if(k==="status"){va=stOf(a.status).r;vb=stOf(b.status).r;return (va-vb)*sortDir}va=va||"";vb=vb||"";if(!va&&vb)return 1;if(va&&!vb)return -1;return String(va).localeCompare(String(vb),"pt-BR")*sortDir});
+  const ps=+$("#pageSize").value;const pages=Math.max(1,Math.ceil(L.length/ps));if(page>=pages)page=pages-1;
+  const rows=L.slice(page*ps,(page+1)*ps);
+  $("#leadCount").textContent=`${L.length.toLocaleString("pt-BR")} lead(s)${L.length!==LEADS.length?` de ${LEADS.length.toLocaleString("pt-BR")}`:""}`;
+  $("#pagerInfo").textContent=L.length?`Mostrando ${page*ps+1}–${Math.min((page+1)*ps,L.length)} de ${L.length}`:"";
+  $("#pgPrev").disabled=page===0;$("#pgNext").disabled=page>=pages-1;
+  document.querySelectorAll("#leadTable th.sort").forEach(th=>{const base=th.textContent.replace(/ [▲▼]$/,"");th.textContent=base+(th.dataset.k===sortK?(sortDir>0?" ▲":" ▼"):"")});
+  $("#leadBody").innerHTML=rows.length?rows.map(l=>`<tr>
+    <td><input type="checkbox" class="chk" data-id="${esc(l.id)}"${selected.has(l.id)?" checked":""} aria-label="Selecionar"></td>
+    <td><span class="name" data-open="${esc(l.id)}">${esc(l.nome||"(sem nome)")}</span>${l.fonte==="avulso"?' <span class="muted">· avulso</span>':""}</td>
+    <td style="white-space:nowrap">${l.telefone?`<a href="https://wa.me/${(()=>{const d=digits(l.telefone);return d.length<=11?"55"+d:d})()}" target="_blank" rel="noopener" title="Abrir no WhatsApp">${esc(phoneFmt(l.telefone))}</a>`:'<span class="muted">—</span>'}</td>
+    <td class="muted">${esc(l.email||"")}</td>
+    <td>${esc(l.origemLead||"")}</td>
+    <td>${statusSelect(l)}${NEEDS_MOTIVO.has(l.status)&&l.motivo?`<div class="muted" style="margin-top:2px">${esc(l.motivo)}</div>`:""}</td>
+    <td>${esc(l.unidade||"")}</td>
+    <td>${fmtD(l.dataConsulta)}</td>
+    <td class="muted">${fmtD(l.updatedAt)}</td>
+  </tr>`).join(""):`<tr><td colspan="9"><div class="empty" style="padding:30px">Nenhum lead encontrado.</div></td></tr>`;
+  $("#chkAll").checked=rows.length>0&&rows.every(l=>selected.has(l.id));
+  updateBulk();
+}
+function updateBulk(){
+  // remove seleções de leads que não existem mais
+  const ids=new Set(LEADS.map(l=>l.id));[...selected].forEach(id=>{if(!ids.has(id))selected.delete(id)});
+  $("#bulk").classList.toggle("hidden",selected.size===0);$("#bulkN").textContent=selected.size;
+}
+
+/* ===================== Modal de lead ===================== */
+let onModalCancel=null;
+function closeModal(cancelled){const cb=onModalCancel;onModalCancel=null;$("#modalRoot").innerHTML="";if(cancelled&&cb)cb()}
+function datalist(id,list){return `<datalist id="${id}">${list.map(v=>`<option value="${esc(v)}">`).join("")}</datalist>`}
+function openLead(id){
+  const isNew=!id;
+  const l=isNew?{status:"novo",fonte:"avulso",dataEntrada:new Date().toISOString().slice(0,10),unidade:"",marcos:{}}:JSON.parse(JSON.stringify(LEADS.find(x=>x.id===id)||{}));
+  if(!isNew&&!l.nome&&!l.email&&!l.telefone){toast("Lead não encontrado",true);return}
+  const st=stOf(l.status).k;
+  $("#modalRoot").innerHTML=`<div class="overlay" id="ov"><div class="modal" role="dialog" aria-modal="true">
+    <div class="mh"><h2>${isNew?"Novo lead avulso":esc(l.nome||"Lead")}</h2><button class="x" data-close aria-label="Fechar">×</button></div>
+    <form class="mb form" id="leadForm" autocomplete="off">
+      <div class="sec">Dados do lead</div>
+      <label class="full">Nome <span class="req">*</span><input class="fld" name="nome" required value="${esc(l.nome)}"></label>
+      <label>Telefone / WhatsApp<input class="fld" name="telefone" value="${esc(l.telefone)}" inputmode="tel"></label>
+      <label>E-mail<input class="fld" name="email" type="email" value="${esc(l.email)}"></label>
+      <label>Cidade<input class="fld" name="cidade" value="${esc(l.cidade)}"></label>
+      <label>Data de entrada<input class="fld" name="dataEntrada" type="date" value="${esc(l.dataEntrada)}"></label>
+      <label>Origem do lead<input class="fld" name="origemLead" list="dlOrig" value="${esc(l.origemLead)}"></label>
+      <label>Frase de origem<select class="fld" name="fraseOrigem">${opts(CFG.frases||[],(CFG.frases||[]).length?"—":"— cadastre as frases em Configurações —",fraseOf(l))}</select></label>
+      <label>Origem da campanha<input class="fld" name="origemCampanha" list="dlCamp" value="${esc(l.origemCampanha)}"></label>
+      <div class="sec">Atendimento</div>
+      <label>Status<select class="fld" name="status" id="mStatus">${STATUS.map(s=>`<option value="${s.k}"${s.k===st?" selected":""}>${s.l}</option>`).join("")}</select></label>
+      <label>Unidade<select class="fld" name="unidade">${opts(union(CFG.unidades,l.unidade?[l.unidade]:[]),"—",l.unidade)}</select></label>
+      <label id="wMotivo" class="full">Motivo do não agendamento / perda <span class="req">*</span><select class="fld" name="motivo">${opts(union(CFG.motivos,l.motivo?[l.motivo]:[]),"Selecione…",l.motivo)}</select></label>
+      <label>Data da consulta<input class="fld" name="dataConsulta" type="date" value="${esc(l.dataConsulta)}"></label>
+      <label>Responsável<select class="fld" name="responsavel">${opts(union(CFG.resp,l.responsavel?[l.responsavel]:[]),"—",l.responsavel)}</select></label>
+      <label>Valor da consulta (R$)<input class="fld" name="valorConsulta" type="number" min="0" step="0.01" value="${esc(l.valorConsulta)}"></label>
+      <label>Valor do pacote (R$)<input class="fld" name="valor" type="number" min="0" step="0.01" value="${esc(l.valor)}"></label>
+      <label class="full">Observações<textarea class="fld" name="observacoes">${esc(l.observacoes)}</textarea></label>
+      ${(l.extras||[]).length?`<details class="full"><summary style="cursor:pointer;font-size:11px;text-transform:uppercase;letter-spacing:.6px;color:var(--gold);font-weight:700">Dados do RD Station (${l.extras.length} colunas)</summary><table class="tbl" style="margin-top:6px">${l.extras.map(x=>`<tr><td class="muted" style="width:40%">${esc(x.c)}</td><td style="word-break:break-word">${/^https?:\/\//.test(x.v)?`<a href="${esc(x.v)}" target="_blank" rel="noopener">${esc(x.v)}</a>`:esc(x.v)}</td></tr>`).join("")}</table></details>`:""}
+      ${!isNew&&l.updatedBy?`<div class="full muted" style="font-size:12px">Última alteração por ${esc(l.updatedBy)} em ${fmtD(l.updatedAt)} ${fmtT(l.updatedAt)}</div>`:""}
+      ${!isNew&&(l.hist||[]).length?`<div class="full"><div style="font-size:12px;font-weight:600;color:var(--ink-2);margin-bottom:4px">Histórico</div><div class="hist">${l.hist.slice().reverse().map(h=>`<div><time>${fmtD(h.t)} ${fmtT(h.t)}</time>${esc(h.txt)}</div>`).join("")}</div></div>`:""}
+      ${datalist("dlOrig",union(CFG.origens,distinct("origemLead")))}${datalist("dlCamp",union(CFG.campanhas,distinct("origemCampanha")))}
+    </form>
+    <div class="mf"><div>${isNew?"":`<button class="btn danger" id="mDel">Excluir lead</button>`}</div><div style="display:flex;gap:8px"><button class="btn" data-close>Cancelar</button><button class="btn primary" id="mSave">${isNew?"Cadastrar lead":"Salvar"}</button></div></div>
+  </div></div>`;
+  const f=$("#leadForm");
+  const syncMotivo=()=>{$("#wMotivo").classList.toggle("hidden",!NEEDS_MOTIVO.has($("#mStatus").value))};
+  syncMotivo();$("#mStatus").addEventListener("change",syncMotivo);
+  $("#ov").addEventListener("click",e=>{if(e.target.id==="ov"||e.target.hasAttribute("data-close"))closeModal()});
+  f.addEventListener("submit",e=>{e.preventDefault();$("#mSave").click()});
+  $("#mSave").addEventListener("click",async()=>{
+    const fd=Object.fromEntries(new FormData(f).entries());
+    if(!fd.nome.trim()){toast("Informe o nome do lead.",true);f.nome.focus();return}
+    if(fd.email.trim()&&!isEmail(fd.email.trim())){toast("E-mail inválido.",true);f.email.focus();return}
+    if(fd.telefone.trim()&&digits(fd.telefone).length<8){toast("Telefone inválido (mínimo 8 dígitos).",true);f.telefone.focus();return}
+    if(NEEDS_MOTIVO.has(fd.status)&&!fd.motivo){toast("Selecione o motivo.",true);return}
+    const out=Object.assign({},l);delete out.id;
+    ["nome","telefone","email","cidade","dataEntrada","origemLead","origemCampanha","unidade","dataConsulta","responsavel","fraseOrigem","observacoes"].forEach(k=>out[k]=(fd[k]||"").trim());
+    out.email=out.email.toLowerCase();
+    out.valorConsulta=toNum(fd.valorConsulta);
+    out.valor=toNum(fd.valor);
+    out.motivo=NEEDS_MOTIVO.has(fd.status)?fd.motivo:"";
+    applyStatus(out,fd.status);
+    out.updatedAt=nowISO();
+    let lid=id;
+    const key=leadKey(out);
+    if(key){const dup=LEADS.find(x=>x.id!==id&&leadKey(x)===key);if(dup){toast(`Já existe outro lead com esse e-mail/telefone: ${dup.nome||"(sem nome)"}`,true);return}}
+    if(isNew){
+      out.createdAt=nowISO();out.fonte="avulso";
+      lid=newId(out);out.hist=[{t:nowISO(),txt:"Lead cadastrado manualmente"}];
+    }
+    closeModal();
+    try{await saveLeads({[lid]:out});toast(isNew?"Lead cadastrado":"Lead atualizado")}catch(e){}
+  });
+  const del=$("#mDel");
+  if(del)del.addEventListener("click",()=>confirmBox(`Excluir o lead "${l.nome}"?`,"Excluir",async()=>{try{await saveLeads({[id]:{_del:true,updatedAt:nowISO()}});toast("Lead excluído")}catch(e){}}));
+}
+function confirmBox(msg,okLbl,onOk){
+  $("#modalRoot").innerHTML=`<div class="overlay" id="ov"><div class="modal sm" role="alertdialog" aria-modal="true"><div class="mb" style="padding-top:22px">${esc(msg)}</div><div class="mf" style="justify-content:flex-end"><button class="btn" data-close>Cancelar</button><button class="btn danger" id="cOk">${esc(okLbl)}</button></div></div></div>`;
+  $("#ov").addEventListener("click",e=>{if(e.target.id==="ov"||e.target.hasAttribute("data-close"))closeModal()});
+  $("#cOk").addEventListener("click",()=>{closeModal();onOk()});
+}
+function motivoBox(ids,status,onCancel){
+  $("#modalRoot").innerHTML=`<div class="overlay" id="ov"><div class="modal sm"><div class="mh"><h2>${stOf(status).l}</h2><button class="x" data-close>×</button></div><div class="mb form" style="grid-template-columns:1fr"><label>Motivo <span class="req">*</span><select class="fld" id="mbMot">${opts(CFG.motivos,"Selecione…")}</select></label></div><div class="mf" style="justify-content:flex-end"><button class="btn" data-close>Cancelar</button><button class="btn primary" id="mbOk">Salvar</button></div></div></div>`;
+  onModalCancel=onCancel||null;
+  $("#ov").addEventListener("click",e=>{if(e.target.id==="ov"||e.target.hasAttribute("data-close"))closeModal(true)});
+  $("#mbOk").addEventListener("click",async()=>{const m=$("#mbMot").value;if(!m){toast("Selecione o motivo.",true);return}closeModal();await bulkSet(ids,{status,motivo:m})});
+}
+async function bulkSet(ids,ch){
+  if(!ids.length)return;
+  const map={};
+  ids.forEach(id=>{const src=LEADS.find(x=>x.id===id);if(!src)return;const l=JSON.parse(JSON.stringify(src));delete l.id;
+    if(ch.status){if(ch.motivo!==undefined)l.motivo=ch.motivo;applyStatus(l,ch.status);if(!NEEDS_MOTIVO.has(ch.status))l.motivo=""}
+    if(ch.unidade)l.unidade=ch.unidade;if(ch.responsavel)l.responsavel=ch.responsavel;
+    l.updatedAt=nowISO();map[id]=l});
+  try{await saveLeads(map);toast(ids.length>1?`${ids.length} leads atualizados`:"Atualizado")}catch(e){}
+}
+
+/* ===================== Importação ===================== */
+function decodeText(buf){
+  const u8=new Uint8Array(buf);
+  let enc=null;
+  if(u8[0]===0xFF&&u8[1]===0xFE)enc="utf-16le";
+  else if(u8[0]===0xFE&&u8[1]===0xFF)enc="utf-16be";
+  else{ // UTF-16 sem BOM: muitos bytes nulos alternados
+    let z0=0,z1=0;const n=Math.min(u8.length,2000);for(let i=0;i<n;i++){if(u8[i]===0)(i%2?z1++:z0++)}
+    if(z1>n/6)enc="utf-16le";else if(z0>n/6)enc="utf-16be";
+  }
+  let t;
+  if(enc)t=new TextDecoder(enc).decode(u8);
+  else{try{t=new TextDecoder("utf-8",{fatal:true}).decode(u8)}catch(e){t=new TextDecoder("windows-1252").decode(u8)}}
+  return t.replace(/^\uFEFF/,"").replace(/\u0000/g,"");
+}
+function readFile(file){
+  const r=new FileReader();
+  r.onerror=()=>showImpErr("Não consegui abrir o arquivo.");
+  r.onload=e=>{
+    try{
+      const u8=new Uint8Array(e.target.result);
+      // Detecta pelo conteúdo, não pela extensão (o RD às vezes gera ".csv.xlsx" que na verdade é texto)
+      const isZip=u8[0]===0x50&&u8[1]===0x4B, isOle=u8[0]===0xD0&&u8[1]===0xCF;
+      let wb;
+      if(isZip||isOle){
+        wb=XLSX.read(u8,{type:"array"}); // datas como número serial (sem fuso)
+      }else{
+        let txt=decodeText(e.target.result).replace(/^\uFEFF/,"");
+        if(/^\s*<(html|table|\?xml)/i.test(txt)) wb=XLSX.read(txt,{type:"string",raw:true});
+        else wb=parseCSV(txt);
+      }
+      if(!wb||!wb.SheetNames.length)throw new Error("planilha vazia");
+      if(busy.import){toast("Aguarde a importação atual terminar.",true);return}
+      imp={wb,file:file.name,sheet:wb.SheetNames[0]};
+      loadSheet();
+    }catch(err){console.error(err);showImpErr("Não consegui ler o arquivo: "+(err&&err.message||err))}
+  };
+  if(typeof XLSX==="undefined"){showImpErr("A biblioteca de planilhas não carregou. Verifique a internet e recarregue a página.");return}
+  if(file.size>30*1024*1024){showImpErr("Arquivo muito grande (máx. 30 MB).");return}
+  r.readAsArrayBuffer(file);
+}
+function showImpErr(msg){toast(msg,true);const m=$("#impMsg");if(m){$("#mapCard").classList.remove("hidden");m.innerHTML=`<span style="color:var(--danger)">${esc(msg)}</span>`}}
+/* CSV próprio: tudo texto, detecta separador ; , ou tab, respeita aspas */
+function parseCSV(txt){
+  const first=txt.split(/\r?\n/).find(l=>l.trim())||"";
+  const cnt=c=>first.split(c).length;
+  const sep=[";",",","\t"].sort((a,b)=>cnt(b)-cnt(a))[0];
+  const rows=[];let row=[],cur="",q=false;
+  for(let i=0;i<txt.length;i++){
+    const c=txt[i];
+    if(q){if(c==='"'){if(txt[i+1]==='"'){cur+='"';i++}else q=false}else cur+=c}
+    else if(c==='"'&&cur==="")q=true; // aspas só abrem no início do campo
+    else if(c===sep){row.push(cur);cur=""}
+    else if(c==="\n"||c==="\r"){if(c==="\r"&&txt[i+1]==="\n")i++;row.push(cur);rows.push(row);row=[];cur=""}
+    else cur+=c;
+  }
+  if(cur!==""||row.length){row.push(cur);rows.push(row)}
+  const ws=XLSX.utils.aoa_to_sheet(rows.map(r=>r.map(v=>String(v))));
+  const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,"Leads");return wb;
+}
+const hn=h=>norm(h).replace(/[^a-z0-9_]+/g," ").trim();
+function loadSheet(){
+  const ws=imp.wb.Sheets[imp.sheet];
+  const aoa=XLSX.utils.sheet_to_json(ws,{header:1,defval:"",raw:true});
+  // linha de cabeçalho = primeira linha com >=2 células preenchidas
+  let hi=aoa.findIndex(r=>r.filter(c=>String(c).trim()).length>=2);if(hi<0)hi=0;
+  imp.headers=(aoa[hi]||[]).map((h,i)=>String(h||"").replace(/[\u0000\uFEFF]/g,"").replace(/^"|"$/g,"").trim()||`Coluna ${i+1}`);
+  imp.rows=aoa.slice(hi+1).filter(r=>r.some(c=>String(c).trim()!==""));
+  imp.map={};
+  imp.phoneCols=imp.headers.map((h,i)=>[h,i]).filter(([h])=>/telefone|celular|whats|phone|fone/i.test(h)).map(x=>x[1]);
+  imp.unitCols=imp.headers.map((h,i)=>[h,i]).filter(([h])=>/utm_campaign|campanha|utm_content/i.test(h)).map(x=>x[1]);
+  const used=new Set();
+  FIELDS_IMPORT.forEach(f=>{
+    for(const re of f.re){const i=imp.headers.findIndex((h,ix)=>!used.has(ix)&&(re.test(h)||re.test(hn(h))));if(i>=0){imp.map[f.k]=i;used.add(i);break}}
+  });
+  $("#mapCard").classList.remove("hidden");
+  $("#mapSub").textContent=`${imp.file} · ${imp.rows.length.toLocaleString("pt-BR")} linhas · ${imp.headers.length} colunas`;
+  $("#sheetPick").innerHTML=imp.wb.SheetNames.length>1?`<label style="font-size:12px;font-weight:600;color:var(--ink-2)">Aba da planilha <select class="fld" id="sheetSel" style="width:auto">${opts(imp.wb.SheetNames,null,imp.sheet)}</select></label>`:"";
+  const ss=$("#sheetSel");if(ss)ss.addEventListener("change",()=>{imp.sheet=ss.value;loadSheet()});
+  $("#mapGrid").innerHTML=FIELDS_IMPORT.map(f=>`<label>${f.l}${f.k==="nome"?' <span class="req">*</span>':""}<select class="fld" data-map="${f.k}"><option value="">${f.k==="unidade"?"— identificar pela campanha —":"— nenhuma coluna —"}</option>${imp.headers.map((h,i)=>`<option value="${i}"${imp.map[f.k]===i?" selected":""}>${esc(h)}</option>`).join("")}</select></label>`).join("");
+  $("#defUnidade").innerHTML=opts(CFG.unidades,"—");
+  $("#mapGrid").querySelectorAll("select").forEach(s=>s.addEventListener("change",()=>{const v=s.value;if(v==="")delete imp.map[s.dataset.map];else imp.map[s.dataset.map]=+v;previewImport()}));
+  $("#impMsg").textContent="";$("#impProg").classList.add("hidden");$("#btnImport").disabled=false;
+  previewImport();
+  if(imp.map.nome===undefined&&imp.map.email===undefined)showImpErr(`Não reconheci as colunas. Primeira linha lida: "${imp.headers.slice(0,6).join(" | ").slice(0,200)}". Escolha manualmente nos campos abaixo ou me envie esse texto.`);
+  $("#mapCard").scrollIntoView({behavior:"smooth",block:"start"});
+}
+function cellStr(v){if(v instanceof Date)return parseDate(v);return String(v==null?"":v).trim()}
+function mappedRows(){
+  const dO=$("#defOrigem").value.trim(),dU=$("#defUnidade").value;
+  return imp.rows.map(r=>{
+    const o={};FIELDS_IMPORT.forEach(f=>{const i=imp.map[f.k];if(i!==undefined)o[f.k]=f.k==="dataEntrada"?parseDate(r[i]):cellStr(r[i])});
+    if(!o.telefone){for(const i of imp.phoneCols){const v=cellStr(r[i]);if(digits(v).length>=8){o.telefone=v;break}}}
+    if(!o.unidade){const hay=norm([o.origemCampanha].concat(imp.unitCols.map(i=>cellStr(r[i]))).join(" "));const u=(CFG.unidades||[]).find(u=>hay.includes(norm(u)));if(u)o.unidade=u}
+    if(!o.origemLead&&dO)o.origemLead=dO;if(!o.unidade&&dU)o.unidade=dU;
+    if(o.email)o.email=o.email.toLowerCase();
+    const ex=[];imp.headers.forEach((h,i)=>{let v=r[i];v=(typeof v==="number"&&/data|date/i.test(h))?fmtD(parseDate(v)):cellStr(v);if(v)ex.push({c:h,v:v.length>500?v.slice(0,500)+"…":v})});
+    o.extras=ex;
+    return o;
+  }).filter(o=>o.nome||o.email||o.telefone);
+}
+function previewImport(){
+  const rows=mappedRows();
+  const cols=FIELDS_IMPORT.filter(f=>imp.map[f.k]!==undefined||(f.k==="origemLead"&&$("#defOrigem").value)||(f.k==="unidade"&&($("#defUnidade").value||rows.some(r=>r.unidade))));
+  $("#preview").innerHTML=`<table class="tbl"><thead><tr>${cols.map(c=>`<th>${c.l}</th>`).join("")}</tr></thead><tbody>${rows.slice(0,5).map(r=>`<tr>${cols.map(c=>`<td>${esc(c.k==="dataEntrada"?fmtD(r[c.k]):r[c.k]||"")}</td>`).join("")}</tr>`).join("")}</tbody></table>`;
+  // novos x existentes
+  const existing=new Map();LEADS.forEach(l=>{const k=leadKey(l);if(k)existing.set(k,l)});
+  let nNew=0,nUpd=0,nSemChave=0;const seen=new Set();let dupFile=0;
+  rows.forEach(r=>{const k=leadKey(r);if(!k){nSemChave++;nNew++;return}if(seen.has(k)){dupFile++;return}seen.add(k);if(existing.has(k))nUpd++;else nNew++});
+  imp.prepared=rows;
+  $("#impStats").innerHTML=`<div><b>${nNew.toLocaleString("pt-BR")}</b>novos leads</div><div><b>${nUpd.toLocaleString("pt-BR")}</b>já existem (serão completados; data de entrada corrigida pela planilha)</div>${dupFile?`<div><b>${dupFile}</b>repetidos na planilha (ignorados)</div>`:""}${nSemChave?`<div><b>${nSemChave}</b>sem e-mail/telefone</div>`:""}`;
+  $("#btnImport").disabled=imp.map.nome===undefined&&imp.map.email===undefined;
+}
+async function runImport(){
+  if(!imp||busy.import)return;
+  const rows=imp.prepared||[];if(!rows.length){showImpErr("Nenhuma linha com nome, e-mail ou telefone foi encontrada. Confira o mapeamento das colunas.");return}
+  const existing=new Map();LEADS.forEach(l=>{const k=leadKey(l);if(k)existing.set(k,l)});
+  const map={};let nNew=0,nUpd=0,nDt=0;const t=nowISO();
+  const seenK=new Set();
+  rows.forEach(r=>{
+    const k=leadKey(r);
+    if(k){if(seenK.has(k))return;seenK.add(k)} // repetido na própria planilha: vale a 1ª linha
+    if(k&&existing.has(k)){
+      const src=existing.get(k);const l=map[src.id]||JSON.parse(JSON.stringify(src));delete l.id;let ch=false;
+      FIELDS_IMPORT.forEach(f=>{if(r[f.k]&&!l[f.k]){l[f.k]=r[f.k];ch=true}});
+      if(r.extras&&r.extras.length&&JSON.stringify(r.extras)!==JSON.stringify(l.extras||[])){l.extras=r.extras;ch=true}
+      if(r.dataEntrada&&l.dataEntrada!==r.dataEntrada&&(l.fonte||"planilha")==="planilha"){l.dataEntrada=r.dataEntrada;ch=true;nDt++}
+      if(ch){l.updatedAt=t;map[src.id]=l;nUpd++}
+      return;
+    }
+    const id=newId(r);if(map[id])return;
+    const l=Object.assign({},r,{status:"novo",marcos:{},fonte:"planilha",createdAt:t,updatedAt:t,hist:[{t,txt:`Importado de ${imp.file}`}]});
+    map[id]=l;nNew++;if(k)existing.set(k,Object.assign({id},l));
+  });
+  if(!Object.keys(map).length){$("#impMsg").textContent="Nenhuma alteração: todos os leads já estavam completos na base.";return}
+  busy.import=true;$("#btnImport").disabled=true;$("#impProg").classList.remove("hidden");$("#impProg i").style.width="5%";
+  $("#impMsg").textContent="Gravando…";
+  onWriteProgress=(d,tot)=>{$("#impProg i").style.width=Math.round(d/tot*100)+"%"};
+  try{
+    await saveLeads(map);
+    $("#impProg i").style.width="100%";
+    $("#impMsg").innerHTML=`<b style="color:var(--brand-2)">Importação concluída:</b> ${nNew} novos leads, ${nUpd} atualizados${nDt?` (${nDt} com data de entrada corrigida)`:""}. <a href="#" id="goLeads">Ver leads →</a>`;
+    const g=$("#goLeads");g&&g.addEventListener("click",e=>{e.preventDefault();setView("leads")});
+    // adiciona campanhas/origens novas à config
+    const camps=union(CFG.campanhas,[]),origs=union(CFG.origens,[]);let cfgCh=false;
+    rows.forEach(r=>{if(r.origemCampanha&&!camps.includes(r.origemCampanha)){camps.push(r.origemCampanha);cfgCh=true}if(r.origemLead&&!origs.includes(r.origemLead)){origs.push(r.origemLead);cfgCh=true}});
+    if(cfgCh&&camps.length<300){CFG.campanhas=camps;CFG.origens=origs;saveCfg()}
+  }catch(e){console.error(e);$("#impMsg").textContent="A importação foi interrompida ("+((e&&((e.code?e.code+": ":"")+(e.message||"")))||"erro")+"). Os leads já gravados ficam salvos; envie a planilha de novo para completar (não duplica)."}
+  finally{onWriteProgress=null;busy.import=false;$("#btnImport").disabled=false}
+}
+
+/* ===================== Export ===================== */
+async function exportXlsx(){
+  if(busy.export)return;
+  if(typeof XLSX==="undefined"){toast("A biblioteca de planilhas não carregou. Recarregue a página.",true);return}
+  const L=filtered();if(!L.length){toast("Nenhum lead para exportar.",true);return}
+  busy.export=true;$("#btnExport").disabled=true;
+  try{await buildAndSave(L)}catch(e){console.error(e);toast("Erro ao gerar a planilha: "+((e&&e.message)||e),true)}
+  finally{busy.export=false;$("#btnExport").disabled=false}
+}
+async function buildAndSave(L){
+  const data=L.map(l=>({"Nome":l.nome||"","Telefone":l.telefone||"","E-mail":l.email||"","Cidade":l.cidade||"","Data de entrada":fmtD(l.dataEntrada),"Origem do lead":l.origemLead||"","Frase de origem":fraseOf(l),"Origem da campanha":l.origemCampanha||"","Status":stOf(l.status).l,"Agendou consulta":(l.marcos||{}).agendou?"Sim":"Não","Compareceu":(l.marcos||{}).compareceu?"Sim":"Não","Negociação":(l.marcos||{}).negociacao?"Sim":"Não","Fechou pacote":(l.marcos||{}).fechou?"Sim":"Não","Motivo não agendamento/perda":l.motivo||"","Unidade":l.unidade||"","Data da consulta":fmtD(l.dataConsulta),"Responsável":l.responsavel||"","Valor da consulta":l.valorConsulta===""||l.valorConsulta==null?"":Number(l.valorConsulta),"Valor do pacote":l.valor===""||l.valor==null?"":Number(l.valor),"Observações":l.observacoes||"","Cadastro":l.fonte==="avulso"?"Avulso":"Planilha RD"}));
+  const exCols=[];L.forEach(l=>(l.extras||[]).forEach(x=>{if(!exCols.includes(x.c))exCols.push(x.c)}));
+  data.forEach((row,i)=>{const m={};(L[i].extras||[]).forEach(x=>m[x.c]=x.v);exCols.forEach(c=>{row["RD · "+c]=m[c]||""})});
+  const ws=XLSX.utils.json_to_sheet(data);ws["!cols"]=Object.keys(data[0]).map(k=>({wch:Math.min(40,Math.max(10,k.length+2))}));
+  const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,"Leads");
+  const buf=XLSX.write(wb,{type:"array",bookType:"xlsx"});
+  const fname=`leads-tricomaster-${new Date().toISOString().slice(0,10)}.xlsx`;
+  const blob=new Blob([buf],{type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"});
+  const dl=DL; // já resolvido no carregamento, para não perder o clique
+  if(dl){
+    try{await dl.save({filename:fname,data:blob});toast("Planilha gerada");return}
+    catch(e){if(e&&e.code==="declined")return;console.warn("downloads.save",e);if(e&&e.code==="rate_limited"){toast("Já há um download aguardando confirmação.",true);return}}
+  }
+  try{const u=URL.createObjectURL(blob);const a=document.createElement("a");a.href=u;a.download=fname;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),60000);toast("Planilha gerada (verifique a pasta Downloads)")}
+  catch(e){toast("Não foi possível gerar o download nesta visualização. Abra o CRM pelo claude.ai.",true)}
+}
+const DL=null; // fora do claude.ai o download é feito direto pelo navegador
+
+/* ===================== Backup ===================== */
+function backupData(){
+  const leads={};LEADS.forEach(l=>{const c=Object.assign({},l);delete c.id;leads[l.id]=c});
+  return {app:"tricomaster-crm",versao:1,geradoEm:nowISO(),cfg:CFG,leads};
+}
+async function exportBackup(){
+  if(busy.export)return;busy.export=true;
+  try{
+    const json=JSON.stringify(backupData());
+    const fname=`backup-crm-tricomaster-${new Date().toISOString().slice(0,10)}.json`;
+    const blob=new Blob([json],{type:"application/json"});
+    if(DL){try{await DL.save({filename:fname,data:blob});toast("Backup gerado");return}catch(e){if(e&&e.code==="declined")return}}
+    const u=URL.createObjectURL(blob);const a=document.createElement("a");a.href=u;a.download=fname;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),60000);toast("Backup gerado");
+  }catch(e){toast("Erro ao gerar backup: "+(e.message||e),true)}finally{busy.export=false}
+}
+function restoreBackup(file){
+  const r=new FileReader();
+  r.onload=async()=>{
+    let o;try{o=JSON.parse(r.result)}catch(e){$("#restoreMsg").textContent="Arquivo inválido (não é JSON).";return}
+    if(!o||o.app!=="tricomaster-crm"||typeof o.leads!=="object"){$("#restoreMsg").textContent="Este arquivo não é um backup do CRM.";return}
+    const exist=new Map();LEADS.forEach(l=>{const k=leadKey(l);if(k)exist.set(k,l.id)});
+    const map={};let n=0;
+    for(const id in o.leads){const l=o.leads[id];if(!l||typeof l!=="object"||l._del||!/^[\w.-]{1,80}$/.test(id))continue;
+      const k=leadKey(l);const target=(k&&exist.get(k))||id; // se já existe (mesmo e-mail/telefone), substitui o existente
+      if(!ST[l.status])l.status="novo";map[target]=l;n++}
+    confirmBox(`Restaurar ${n} lead(s) do backup? Leads com o mesmo e-mail/telefone serão substituídos pela versão do backup.`,"Restaurar",async()=>{
+      $("#restoreMsg").textContent="Gravando…";
+      try{await saveLeads(map);if(o.cfg){CFG=sanitizeCfg(o.cfg);await saveCfg()}$("#restoreMsg").textContent=`Backup restaurado: ${n} lead(s).`}
+      catch(e){$("#restoreMsg").textContent="Restauração interrompida — envie o arquivo de novo para completar."}
+    });
+  };
+  r.readAsText(file);
+}
+
+/* ===================== Config ===================== */
+function fillCfg(){
+  $("#cfgOrigens").value=(CFG.origens||[]).join("\n");$("#cfgCampanhas").value=(CFG.campanhas||[]).join("\n");
+  $("#cfgMotivos").value=(CFG.motivos||[]).join("\n");$("#cfgFrases").value=(CFG.frases||[]).join("\n");
+  $("#cfgUnidades").value=(CFG.unidades||[]).join("\n");$("#cfgResp").value=(CFG.resp||[]).join("\n");
+}
+const lines=id=>[...new Set($(id).value.split("\n").map(s=>s.trim()).filter(Boolean))];
+
+/* ===================== Views ===================== */
+function setView(v){
+  view=v;document.querySelectorAll("#tabs button").forEach(b=>b.classList.toggle("active",b.dataset.view===v));
+  ["dashboard","leads","importar","config"].forEach(x=>$("#v-"+x).classList.toggle("hidden",x!==v));
+  $("#filters").classList.toggle("hidden",!(v==="dashboard"||v==="leads"));
+  if(v==="config")fillCfg();
+  try{history.replaceState(null,"","#"+v)}catch(e){}
+  renderAll();
+}
+let rq=null;
+function renderAll(){
+  if(rq)return;rq=requestAnimationFrame(()=>{rq=null;
+    fillSelects();
+    if(view==="dashboard")renderDashboard();
+    if(view==="leads")renderLeads();
+  });
+}
+
+/* ===================== Eventos ===================== */
+document.querySelectorAll("#tabs button").forEach(b=>b.addEventListener("click",()=>setView(b.dataset.view)));
+const applyFilter=(k,v)=>{filters[k]=v;page=0;renderAll()};
+const applySearch=debounce(v=>applyFilter("q",v),200);
+Object.entries(FMAP).forEach(([id,k])=>{const el=document.getElementById(id);if(id==="fQ")el.addEventListener("input",()=>applySearch(el.value));else el.addEventListener("change",()=>applyFilter(k,el.value))});
+$("#fClear").addEventListener("click",()=>{Object.keys(filters).forEach(k=>filters[k]="");Object.keys(FMAP).forEach(id=>document.getElementById(id).value="");page=0;renderAll()});
+$("#btnNew").addEventListener("click",()=>openLead(null));
+$("#pageSize").addEventListener("change",()=>{page=0;renderLeads()});
+$("#pgPrev").addEventListener("click",()=>{page--;renderLeads()});
+$("#pgNext").addEventListener("click",()=>{page++;renderLeads()});
+$("#btnExport").addEventListener("click",exportXlsx);
+document.querySelectorAll("#leadTable th.sort").forEach(th=>th.addEventListener("click",()=>{const k=th.dataset.k;if(sortK===k)sortDir*=-1;else{sortK=k;sortDir=(k==="nome"||k==="origemLead"||k==="origemCampanha"||k==="unidade")?1:-1}renderLeads()}));
+$("#leadBody").addEventListener("click",e=>{const o=e.target.closest("[data-open]");if(o)openLead(o.dataset.open)});
+$("#leadBody").addEventListener("change",e=>{
+  const t=e.target;
+  if(t.classList.contains("chk")){t.checked?selected.add(t.dataset.id):selected.delete(t.dataset.id);updateBulk();return}
+  if(t.classList.contains("st-sel")){
+    const id=t.dataset.id,s=t.value;
+    if(NEEDS_MOTIVO.has(s))motivoBox([id],s,()=>renderLeads());
+    else bulkSet([id],{status:s});
+  }
+});
+$("#chkAll").addEventListener("change",e=>{document.querySelectorAll("#leadBody .chk").forEach(c=>{c.checked=e.target.checked;e.target.checked?selected.add(c.dataset.id):selected.delete(c.dataset.id)});updateBulk()});
+$("#bulkClear").addEventListener("click",()=>{selected.clear();renderLeads()});
+$("#bulkApply").addEventListener("click",async()=>{
+  if(busy.bulk)return;
+  const ch={};if($("#bulkStatus").value)ch.status=$("#bulkStatus").value;if($("#bulkUnidade").value)ch.unidade=$("#bulkUnidade").value;if($("#bulkResp").value)ch.responsavel=$("#bulkResp").value;
+  if(!Object.keys(ch).length){toast("Escolha o que alterar.",true);return}
+  busy.bulk=true;$("#bulkApply").disabled=true;
+  try{await bulkSet([...selected],ch);$("#bulkStatus").value="";$("#bulkUnidade").value="";$("#bulkResp").value=""}
+  finally{busy.bulk=false;$("#bulkApply").disabled=false}
+});
+$("#bulkDel").addEventListener("click",()=>{const ids=[...selected];confirmBox(`Excluir ${ids.length} lead(s)? Essa ação não pode ser desfeita.`,"Excluir",async()=>{const m={};ids.forEach(id=>m[id]={_del:true,updatedAt:nowISO()});selected.clear();try{await saveLeads(m);toast(`${ids.length} lead(s) excluído(s)`)}catch(e){}})});
+
+const drop=$("#drop"),fi=$("#file");
+drop.addEventListener("click",()=>fi.click());
+fi.addEventListener("change",()=>{if(fi.files[0])readFile(fi.files[0]);fi.value=""});
+["dragenter","dragover"].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.add("over")}));
+["dragleave","drop"].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.remove("over")}));
+drop.addEventListener("drop",e=>{const f=e.dataTransfer.files[0];if(f)readFile(f)});
+$("#defOrigem").addEventListener("input",()=>imp&&previewImport());
+$("#defUnidade").addEventListener("change",()=>imp&&previewImport());
+$("#btnImport").addEventListener("click",runImport);
+$("#btnCancelImp").addEventListener("click",()=>{imp=null;$("#mapCard").classList.add("hidden")});
+
+$("#btnSaveCfg").addEventListener("click",async()=>{
+  if(busy.cfg)return;busy.cfg=true;
+  const prevCfg=CFG;
+  CFG={origens:lines("#cfgOrigens"),campanhas:lines("#cfgCampanhas"),motivos:lines("#cfgMotivos"),frases:lines("#cfgFrases"),unidades:lines("#cfgUnidades"),resp:lines("#cfgResp")};
+  if(!CFG.unidades.length)CFG.unidades=DEFAULT_CFG.unidades.slice();
+  if(!CFG.motivos.length)CFG.motivos=DEFAULT_CFG.motivos.slice();
+  const ok=await saveCfg();busy.cfg=false;
+  if(ok){fillSelects();toast("Configurações salvas")}else{CFG=prevCfg;fillCfg()}
+});
+$("#btnBackup").addEventListener("click",exportBackup);
+$("#btnRestore").addEventListener("click",()=>$("#fileRestore").click());
+$("#fileRestore").addEventListener("change",e=>{const f=e.target.files[0];if(f)restoreBackup(f);e.target.value=""});
+$("#btnWipe").addEventListener("click",()=>confirmBox(`Apagar TODOS os ${LEADS.length} leads? Essa ação não pode ser desfeita.`,"Apagar tudo",async()=>{
+  if(busy.wipe)return;busy.wipe=true;
+  try{const m={};LEADS.forEach(l=>m[l.id]={_del:true});await saveLeads(m);toast("Base apagada")}catch(e){}finally{busy.wipe=false}
+}));
+document.addEventListener("keydown",e=>{if(e.key==="Escape"&&$("#modalRoot").firstChild)closeModal(true)});
+
+$("#lgForm").addEventListener("submit",doLogin);
+$("#lgReset").addEventListener("click",doReset);
+$("#btnLogout").addEventListener("click",doLogout);
+window.addEventListener("unhandledrejection",e=>{console.error(e.reason);const r=e.reason;if(r&&r.code)return;toast("Erro inesperado: "+((r&&r.message)||r),true)});
+
+/* ===================== Start ===================== */
+const h=(location.hash||"").slice(1);if(["dashboard","leads","importar","config"].includes(h))setView(h);
+fillSelects();renderAll();initDb();
+})();
+</script>
+</body>
+</html>
