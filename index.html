@@ -8,6 +8,17 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script>
+// Configuração do Firebase — projeto tricomaster-crm---leads
+window.FIREBASE_CONFIG = {
+  apiKey: "AIzaSyABuPvjz5izIPNC9wfsOnXGmkp77lFQLPk",
+  authDomain: "tricomaster-crm---leads.firebaseapp.com",
+  projectId: "tricomaster-crm---leads",
+  storageBucket: "tricomaster-crm---leads.firebasestorage.app",
+  messagingSenderId: "779448618237",
+  appId: "1:779448618237:web:c81b6da2bee48976ffc294"
+};
+</script>
 <style>
 :root{
   --bg:#f5f4f0; --surface:#fcfcfb; --surface-2:#f0efea; --line:#e2e0d8; --line-2:#cfccc1;
@@ -442,25 +453,8 @@ function applyStatus(l,s){
 }
 
 /* ===================== Firebase: configuração ===================== */
-<script type="module">
-  // Import the functions you need from the SDKs you need
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/13.4.0/firebase-app.js";
-  // TODO: Add SDKs for Firebase products that you want to use
-  // https://firebase.google.com/docs/web/setup#available-libraries
-
-  // Your web app's Firebase configuration
-  const firebaseConfig = {
-    apiKey: "AIzaSyABuPvjz5izIPNC9wfsOnXGmkp77lFQLPk",
-    authDomain: "tricomaster-crm---leads.firebaseapp.com",
-    projectId: "tricomaster-crm---leads",
-    storageBucket: "tricomaster-crm---leads.firebasestorage.app",
-    messagingSenderId: "779448618237",
-    appId: "1:779448618237:web:c81b6da2bee48976ffc294"
-  };
-
-  // Initialize Firebase
-  const app = initializeApp(firebaseConfig);
-</script>
+// A configuração fica no bloco window.FIREBASE_CONFIG, no início do arquivo.
+const firebaseConfig = (window.FIREBASE_CONFIG && typeof window.FIREBASE_CONFIG==="object") ? window.FIREBASE_CONFIG : {apiKey:"COLE_AQUI"};
 const FB_VERSION = "10.12.2";
 const COL_LEADS = "leads";            // 1 documento por lead
 const DOC_CFG = ["config","listas"];  // listas de opções
@@ -573,7 +567,7 @@ function showLogin(){$("#login").classList.remove("hidden");setTimeout(()=>{cons
 function hideLogin(){$("#login").classList.add("hidden");$("#lgSenha").value="";$("#lgMsg").textContent=""}
 function showSetup(){
   setSync("err","Firebase não configurado");
-  $("#banner").innerHTML="Falta configurar o Firebase: abra o <b>index.html</b>, procure <b>firebaseConfig</b> e cole os dados do seu projeto (veja o LEIAME).";
+  $("#banner").innerHTML="Falta configurar o Firebase: verifique o bloco FIREBASE_CONFIG no início do index.html.";
   $("#banner").classList.remove("hidden");
 }
 const AUTH_MSG={"auth/invalid-credential":"E-mail ou senha incorretos.","auth/invalid-email":"E-mail inválido.","auth/user-disabled":"Usuário desativado.","auth/too-many-requests":"Muitas tentativas. Aguarde alguns minutos.","auth/network-request-failed":"Sem conexão com a internet.","auth/missing-password":"Informe a senha."};
