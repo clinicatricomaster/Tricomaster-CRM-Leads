@@ -77,7 +77,7 @@ textarea.fld{resize:vertical;min-height:70px}
 .card .bd{padding:12px 16px 16px}
 
 /* KPIs */
-.kpis{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:10px;margin-bottom:14px}
+.kpis{display:grid;grid-template-columns:repeat(9,minmax(0,1fr));gap:10px;margin-bottom:14px}
 @media(max-width:1200px){.kpis{grid-template-columns:repeat(4,minmax(0,1fr))}}@media(max-width:640px){.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
 .kpi{padding:12px 12px}
 .kpi .lbl{font-size:12px;color:var(--ink-2);font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -120,6 +120,7 @@ table.tbl{width:100%;border-collapse:collapse;font-size:13px}
 .mini .tr{flex:1;height:6px;background:var(--surface-2);border-radius:3px;overflow:hidden;min-width:50px}
 .mini .tr i{display:block;height:100%;background:var(--s1);border-radius:0 3px 3px 0}
 
+.pago{display:inline-block;font-size:11px;font-weight:700;color:#1a6a1a;background:#d8efd8;border-radius:10px;padding:1px 7px;margin-left:4px;vertical-align:1px;cursor:help}
 .badge{display:inline-flex;align-items:center;gap:5px;padding:2px 8px;border-radius:20px;font-size:12px;font-weight:600;white-space:nowrap;border:1px solid transparent}
 .badge::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor}
 .st-novo{background:#eeede8;color:#55554f}
@@ -214,6 +215,7 @@ select.st-sel{border:1px solid transparent;border-radius:20px;padding:3px 8px;fo
     <label>Unidade<select class="fld" id="fUnidade"></select></label>
     <label>Motivo não agend.<select class="fld" id="fMotivo"></select></label>
     <label>Responsável<select class="fld" id="fResp"></select></label>
+    <label>Pagamento<select class="fld" id="fPag"><option value="">Todos</option><option value="pagou">Já pagou (consulta ou pacote)</option><option value="consulta">Pagou consulta</option><option value="pacote">Pagou pacote</option><option value="nao">Sem pagamento</option></select></label>
     <label>Cadastro<select class="fld" id="fFonte"><option value="">Todos</option><option value="planilha">Planilha RD</option><option value="avulso">Avulso</option></select></label>
     <div class="actions"><button class="btn" id="fClear">Limpar filtros</button></div>
   </section>
@@ -317,7 +319,7 @@ select.st-sel{border:1px solid transparent;border-radius:20px;padding:3px 8px;fo
       <div class="cfg-grid">
         <label class="form" style="display:flex;flex-direction:column;gap:4px;font-weight:600;font-size:12px;color:var(--ink-2)">Origens do lead<textarea class="fld" id="cfgOrigens"></textarea></label>
         <label style="display:flex;flex-direction:column;gap:4px;font-weight:600;font-size:12px;color:var(--ink-2)">Campanhas<textarea class="fld" id="cfgCampanhas"></textarea></label>
-        <label style="display:flex;flex-direction:column;gap:4px;font-weight:600;font-size:12px;color:var(--ink-2)">Motivos de não agendamento / perda<textarea class="fld" id="cfgMotivos"></textarea></label>
+        <label style="display:flex;flex-direction:column;gap:4px;font-weight:600;font-size:12px;color:var(--ink-2)">Motivos de não agendamento / sem contato<textarea class="fld" id="cfgMotivos"></textarea></label>
         <label style="display:flex;flex-direction:column;gap:4px;font-weight:600;font-size:12px;color:var(--ink-2)">Frases de origem<textarea class="fld" id="cfgFrases" placeholder="Ex.: queda de cabelo&#10;transplante capilar"></textarea></label>
         <label style="display:flex;flex-direction:column;gap:4px;font-weight:600;font-size:12px;color:var(--ink-2)">Unidades<textarea class="fld" id="cfgUnidades"></textarea></label>
         <label style="display:flex;flex-direction:column;gap:4px;font-weight:600;font-size:12px;color:var(--ink-2)">Responsáveis (atendimento)<textarea class="fld" id="cfgResp"></textarea></label>
@@ -363,7 +365,7 @@ const STATUS = [
   {k:"negociacao",  l:"Em negociação",      r:4},
   {k:"fechou",      l:"Pacote fechado",     r:5},
   {k:"nao_agendou", l:"Não agendou",        r:1},
-  {k:"perdido",     l:"Perdido (não fechou)", r:-1}
+  {k:"perdido",     l:"Sem contato", r:-1}
 ];
 const ST = Object.fromEntries(STATUS.map(s=>[s.k,s]));
 const stOf = k => ST[k] || ST.novo; // status desconhecido/corrompido nunca derruba a tela
@@ -447,7 +449,7 @@ function validYMD(y,mo,d){ // rejeita 31/02, mês 13 etc.
 function applyStatus(l,s){
   if(!ST[s])s="novo";
   const prev=l.status||"novo";l.status=s;l.marcos=l.marcos||{};
-  if(s==="perdido"){ if(!l.marcos.contato)l.marcos.contato=true; }
+  if(s==="perdido"){ /* sem contato: mantém as etapas já alcançadas */ }
   else{const r=ST[s].r;MILESTONES.forEach(m=>{l.marcos[m.k]=m.r<=r})}
   if(prev!==s){l.hist=(l.hist||[]).concat([{t:nowISO(),txt:`Status: ${stOf(prev).l} → ${ST[s].l}`}]).slice(-40)}
 }
@@ -616,8 +618,9 @@ function fillSelects(){
 }
 
 /* ===================== Filtros ===================== */
-const filters={mes:"",frase:"",q:"",de:"",ate:"",status:"",origem:"",campanha:"",unidade:"",motivo:"",resp:"",fonte:""};
-const FMAP={fMes:"mes",fFrase:"frase",fQ:"q",fDe:"de",fAte:"ate",fStatus:"status",fOrigem:"origem",fCampanha:"campanha",fUnidade:"unidade",fMotivo:"motivo",fResp:"resp",fFonte:"fonte"};
+const pagC=l=>Number(l.valorConsulta)>0, pagP=l=>Number(l.valor)>0, pagou=l=>pagC(l)||pagP(l);
+const filters={pag:"",mes:"",frase:"",q:"",de:"",ate:"",status:"",origem:"",campanha:"",unidade:"",motivo:"",resp:"",fonte:""};
+const FMAP={fPag:"pag",fMes:"mes",fFrase:"frase",fQ:"q",fDe:"de",fAte:"ate",fStatus:"status",fOrigem:"origem",fCampanha:"campanha",fUnidade:"unidade",fMotivo:"motivo",fResp:"resp",fFonte:"fonte"};
 // só valem frases cadastradas manualmente em Configurações
 const fraseOf=l=>(l.fraseOrigem&&(CFG.frases||[]).includes(l.fraseOrigem))?l.fraseOrigem:"";
 function matchVal(fv,v){if(!fv)return true;if(fv==="(vazio)")return !v;return v===fv}
@@ -635,6 +638,7 @@ function filtered(){
     if(!matchVal(filters.motivo,l.motivo))return false;
     if(!matchVal(filters.resp,l.responsavel))return false;
     if(filters.fonte&&(l.fonte||"planilha")!==filters.fonte)return false;
+    if(filters.pag){const ok={pagou:pagou(l),consulta:pagC(l),pacote:pagP(l),nao:!pagou(l)}[filters.pag];if(!ok)return false}
     if(q){const hay=norm([l.nome,l.email,l.cidade,l.observacoes,fraseOf(l),l.origemCampanha].concat((l.extras||[]).map(x=>x.v)).join(" "));if(!hay.includes(q)&&!(qd.length>=4&&digits(l.telefone).includes(qd)))return false}
     return true;
   });
@@ -673,6 +677,7 @@ function renderDashboard(){
     k("Pacotes fechados",fe.toLocaleString("pt-BR"),`${pctS(fe,comp||ag)} ${comp?"das consultas":"dos agendados"}`)+
     k("Receita de consultas",brl(recC),nC?`${nC} consulta(s) com valor · média ${brl(recC/nC)}`:"informe o valor da consulta no lead")+
     k("Receita de pacotes",brl(rec),(()=>{const nv=L.filter(l=>(l.marcos||{}).fechou&&Number(l.valor)>0).length;return nv?`ticket médio ${brl(rec/nv)}${nv<fe?` · ${fe-nv} sem valor`:""}`:""})())+
+    k("Pagantes",L.filter(pagou).length.toLocaleString("pt-BR"),`${brl(recC+L.reduce((s,l)=>s+(Number(l.valor)||0),0))} recebidos · ver em Leads › Pagamento`)+
     k("Não agendaram",naoAg.toLocaleString("pt-BR"),`${pctS(naoAg,n)} dos leads`);
 
   // funil
@@ -686,7 +691,7 @@ function renderDashboard(){
   // motivos
   const mc={};L.filter(l=>NEEDS_MOTIVO.has(l.status)).forEach(l=>{const m=l.motivo||"(sem motivo informado)";mc[m]=(mc[m]||0)+1});
   const mt=Object.values(mc).reduce((a,b)=>a+b,0);
-  $("#motivoSub").textContent=mt?`${mt} leads não agendados/perdidos`:"";
+  $("#motivoSub").textContent=mt?`${mt} leads não agendados / sem contato`:"";
   $("#motivoBars").innerHTML=hbarsHTML(Object.entries(mc).sort((a,b)=>b[1]-a[1]),mt,"var(--s2)");
 
   $("#tOrigem").innerHTML=groupTable(L,"origemLead","Origem","(sem origem)");
@@ -731,7 +736,7 @@ function renderLeads(){
   document.querySelectorAll("#leadTable th.sort").forEach(th=>{const base=th.textContent.replace(/ [▲▼]$/,"");th.textContent=base+(th.dataset.k===sortK?(sortDir>0?" ▲":" ▼"):"")});
   $("#leadBody").innerHTML=rows.length?rows.map(l=>`<tr>
     <td><input type="checkbox" class="chk" data-id="${esc(l.id)}"${selected.has(l.id)?" checked":""} aria-label="Selecionar"></td>
-    <td><span class="name" data-open="${esc(l.id)}">${esc(l.nome||"(sem nome)")}</span>${l.fonte==="avulso"?' <span class="muted">· avulso</span>':""}</td>
+    <td><span class="name" data-open="${esc(l.id)}">${esc(l.nome||"(sem nome)")}</span>${l.fonte==="avulso"?' <span class="muted">· avulso</span>':""}${pagou(l)?` <span class="pago" title="${esc([pagC(l)?"Consulta "+brl(l.valorConsulta):"",pagP(l)?"Pacote "+brl(l.valor):""].filter(Boolean).join(" · "))}">R$ pago</span>`:""}</td>
     <td style="white-space:nowrap">${l.telefone?`<a href="https://wa.me/${(()=>{const d=digits(l.telefone);return d.length<=11?"55"+d:d})()}" target="_blank" rel="noopener" title="Abrir no WhatsApp">${esc(phoneFmt(l.telefone))}</a>`:'<span class="muted">—</span>'}</td>
     <td class="muted">${esc(l.email||"")}</td>
     <td>${esc(l.origemLead||"")}</td>
@@ -773,7 +778,7 @@ function openLead(id){
       <div class="sec">Atendimento</div>
       <label>Status<select class="fld" name="status" id="mStatus">${STATUS.map(s=>`<option value="${s.k}"${s.k===st?" selected":""}>${s.l}</option>`).join("")}</select></label>
       <label>Unidade<select class="fld" name="unidade">${opts(union(CFG.unidades,l.unidade?[l.unidade]:[]),"—",l.unidade)}</select></label>
-      <label id="wMotivo" class="full">Motivo do não agendamento / perda <span class="req">*</span><select class="fld" name="motivo">${opts(union(CFG.motivos,l.motivo?[l.motivo]:[]),"Selecione…",l.motivo)}</select></label>
+      <label id="wMotivo" class="full">Motivo do não agendamento / sem contato <span class="req">*</span><select class="fld" name="motivo">${opts(union(CFG.motivos,l.motivo?[l.motivo]:[]),"Selecione…",l.motivo)}</select></label>
       <label>Data da consulta<input class="fld" name="dataConsulta" type="date" value="${esc(l.dataConsulta)}"></label>
       <label>Responsável<select class="fld" name="responsavel">${opts(union(CFG.resp,l.responsavel?[l.responsavel]:[]),"—",l.responsavel)}</select></label>
       <label>Valor da consulta (R$)<input class="fld" name="valorConsulta" type="number" min="0" step="0.01" value="${esc(l.valorConsulta)}"></label>
@@ -789,6 +794,7 @@ function openLead(id){
   const f=$("#leadForm");
   const syncMotivo=()=>{$("#wMotivo").classList.toggle("hidden",!NEEDS_MOTIVO.has($("#mStatus").value))};
   syncMotivo();$("#mStatus").addEventListener("change",syncMotivo);
+  $("#mStatus").addEventListener("change",()=>{if($("#mStatus").value==="agendou"){const d=f.dataConsulta;d.focus();try{d.showPicker()}catch(e){}}});
   $("#ov").addEventListener("click",e=>{if(e.target.id==="ov"||e.target.hasAttribute("data-close"))closeModal()});
   f.addEventListener("submit",e=>{e.preventDefault();$("#mSave").click()});
   $("#mSave").addEventListener("click",async()=>{
@@ -797,6 +803,7 @@ function openLead(id){
     if(fd.email.trim()&&!isEmail(fd.email.trim())){toast("E-mail inválido.",true);f.email.focus();return}
     if(fd.telefone.trim()&&digits(fd.telefone).length<8){toast("Telefone inválido (mínimo 8 dígitos).",true);f.telefone.focus();return}
     if(NEEDS_MOTIVO.has(fd.status)&&!fd.motivo){toast("Selecione o motivo.",true);return}
+    if(fd.status==="agendou"&&!fd.dataConsulta){toast("Informe a data da consulta.",true);f.dataConsulta.focus();try{f.dataConsulta.showPicker()}catch(e){}return}
     const out=Object.assign({},l);delete out.id;
     ["nome","telefone","email","cidade","dataEntrada","origemLead","origemCampanha","unidade","dataConsulta","responsavel","fraseOrigem","observacoes"].forEach(k=>out[k]=(fd[k]||"").trim());
     out.email=out.email.toLowerCase();
@@ -823,6 +830,25 @@ function confirmBox(msg,okLbl,onOk){
   $("#ov").addEventListener("click",e=>{if(e.target.id==="ov"||e.target.hasAttribute("data-close"))closeModal()});
   $("#cOk").addEventListener("click",()=>{closeModal();onOk()});
 }
+function agendaBox(id,onCancel){
+  const l=LEADS.find(x=>x.id===id)||{};
+  const hoje=new Date();const iso=new Date(hoje.getTime()-hoje.getTimezoneOffset()*60000).toISOString().slice(0,10);
+  $("#modalRoot").innerHTML=`<div class="overlay" id="ov"><div class="modal sm"><div class="mh"><h2>Consulta agendada</h2><button class="x" data-close>×</button></div>
+    <div class="mb form" style="grid-template-columns:1fr">
+      <div class="muted">${esc(l.nome||"")}</div>
+      <label>Data da consulta <span class="req">*</span><input class="fld" type="date" id="agData" min="${iso}" value="${esc(l.dataConsulta&&l.dataConsulta>=iso?l.dataConsulta:"")}"></label>
+      <label>Unidade<select class="fld" id="agUni">${opts(union(CFG.unidades,l.unidade?[l.unidade]:[]),"—",l.unidade)}</select></label>
+    </div>
+    <div class="mf" style="justify-content:flex-end"><button class="btn" data-close>Cancelar</button><button class="btn primary" id="agOk">Salvar</button></div></div></div>`;
+  onModalCancel=onCancel||null;
+  $("#ov").addEventListener("click",e=>{if(e.target.id==="ov"||e.target.hasAttribute("data-close"))closeModal(true)});
+  const inp=$("#agData");inp.focus();try{inp.showPicker()}catch(e){} // abre o calendário automaticamente
+  inp.addEventListener("keydown",e=>{if(e.key==="Enter")$("#agOk").click()});
+  $("#agOk").addEventListener("click",async()=>{
+    const d=inp.value;if(!d){toast("Escolha a data da consulta.",true);inp.focus();try{inp.showPicker()}catch(e){}return}
+    const uni=$("#agUni").value||"";closeModal();await bulkSet([id],{status:"agendou",dataConsulta:d,unidade:uni});
+  });
+}
 function motivoBox(ids,status,onCancel){
   $("#modalRoot").innerHTML=`<div class="overlay" id="ov"><div class="modal sm"><div class="mh"><h2>${stOf(status).l}</h2><button class="x" data-close>×</button></div><div class="mb form" style="grid-template-columns:1fr"><label>Motivo <span class="req">*</span><select class="fld" id="mbMot">${opts(CFG.motivos,"Selecione…")}</select></label></div><div class="mf" style="justify-content:flex-end"><button class="btn" data-close>Cancelar</button><button class="btn primary" id="mbOk">Salvar</button></div></div></div>`;
   onModalCancel=onCancel||null;
@@ -835,6 +861,7 @@ async function bulkSet(ids,ch){
   ids.forEach(id=>{const src=LEADS.find(x=>x.id===id);if(!src)return;const l=JSON.parse(JSON.stringify(src));delete l.id;
     if(ch.status){if(ch.motivo!==undefined)l.motivo=ch.motivo;applyStatus(l,ch.status);if(!NEEDS_MOTIVO.has(ch.status))l.motivo=""}
     if(ch.unidade)l.unidade=ch.unidade;if(ch.responsavel)l.responsavel=ch.responsavel;
+    if(ch.dataConsulta){if(l.dataConsulta!==ch.dataConsulta)l.hist=(l.hist||[]).concat([{t:nowISO(),txt:`Consulta marcada para ${fmtD(ch.dataConsulta)}`}]).slice(-40);l.dataConsulta=ch.dataConsulta}
     l.updatedAt=nowISO();map[id]=l});
   try{await saveLeads(map);toast(ids.length>1?`${ids.length} leads atualizados`:"Atualizado")}catch(e){}
 }
@@ -1000,7 +1027,7 @@ async function exportXlsx(){
   finally{busy.export=false;$("#btnExport").disabled=false}
 }
 async function buildAndSave(L){
-  const data=L.map(l=>({"Nome":l.nome||"","Telefone":l.telefone||"","E-mail":l.email||"","Cidade":l.cidade||"","Data de entrada":fmtD(l.dataEntrada),"Origem do lead":l.origemLead||"","Frase de origem":fraseOf(l),"Origem da campanha":l.origemCampanha||"","Status":stOf(l.status).l,"Agendou consulta":(l.marcos||{}).agendou?"Sim":"Não","Compareceu":(l.marcos||{}).compareceu?"Sim":"Não","Negociação":(l.marcos||{}).negociacao?"Sim":"Não","Fechou pacote":(l.marcos||{}).fechou?"Sim":"Não","Motivo não agendamento/perda":l.motivo||"","Unidade":l.unidade||"","Data da consulta":fmtD(l.dataConsulta),"Responsável":l.responsavel||"","Valor da consulta":l.valorConsulta===""||l.valorConsulta==null?"":Number(l.valorConsulta),"Valor do pacote":l.valor===""||l.valor==null?"":Number(l.valor),"Observações":l.observacoes||"","Cadastro":l.fonte==="avulso"?"Avulso":"Planilha RD"}));
+  const data=L.map(l=>({"Nome":l.nome||"","Telefone":l.telefone||"","E-mail":l.email||"","Cidade":l.cidade||"","Data de entrada":fmtD(l.dataEntrada),"Origem do lead":l.origemLead||"","Frase de origem":fraseOf(l),"Origem da campanha":l.origemCampanha||"","Status":stOf(l.status).l,"Agendou consulta":(l.marcos||{}).agendou?"Sim":"Não","Compareceu":(l.marcos||{}).compareceu?"Sim":"Não","Negociação":(l.marcos||{}).negociacao?"Sim":"Não","Fechou pacote":(l.marcos||{}).fechou?"Sim":"Não","Motivo não agendamento/perda":l.motivo||"","Unidade":l.unidade||"","Data da consulta":fmtD(l.dataConsulta),"Responsável":l.responsavel||"","Pagou?":pagou(l)?"Sim":"Não","Valor da consulta":l.valorConsulta===""||l.valorConsulta==null?"":Number(l.valorConsulta),"Valor do pacote":l.valor===""||l.valor==null?"":Number(l.valor),"Observações":l.observacoes||"","Cadastro":l.fonte==="avulso"?"Avulso":"Planilha RD"}));
   const exCols=[];L.forEach(l=>(l.extras||[]).forEach(x=>{if(!exCols.includes(x.c))exCols.push(x.c)}));
   data.forEach((row,i)=>{const m={};(L[i].extras||[]).forEach(x=>m[x.c]=x.v);exCols.forEach(c=>{row["RD · "+c]=m[c]||""})});
   const ws=XLSX.utils.json_to_sheet(data);ws["!cols"]=Object.keys(data[0]).map(k=>({wch:Math.min(40,Math.max(10,k.length+2))}));
@@ -1097,6 +1124,7 @@ $("#leadBody").addEventListener("change",e=>{
   if(t.classList.contains("st-sel")){
     const id=t.dataset.id,s=t.value;
     if(NEEDS_MOTIVO.has(s))motivoBox([id],s,()=>renderLeads());
+    else if(s==="agendou")agendaBox(id,()=>renderLeads());
     else bulkSet([id],{status:s});
   }
 });
